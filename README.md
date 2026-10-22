@@ -1,6 +1,8 @@
 <div align="center">
 
-# Open Agent Harness
+<img src="docs/readme-banner.png" alt="Open Agent Harness — Team project assistant, with six interlocking mascot pieces" width="100%">
+
+<!-- # Open Agent Harness -->
 
 **Any project. Any domain. Start with Open Agent.**
 
