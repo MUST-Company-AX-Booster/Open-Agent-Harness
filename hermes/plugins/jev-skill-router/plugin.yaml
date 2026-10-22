@@ -1,0 +1,96 @@
+name: jev-skill-router
+version: 0.1.0
+description: >-
+  Names the skills from your live roster that fit the turn, before the model call —
+  typed routing via TypeSafe Jev on the Vercel AI Gateway. Says nothing when nothing fits.
+  Stdlib only.
+author: Patrick (DoGMaTiiC)
+license: MIT
+homepage: https://github.com/DoGMaTiiC/hermes-jev-skill-router
+requires_hermes: ">=0.21"
+kind: standalone
+tags: [routing, skills, hooks, jev, typesafe, vercel]
+provides_tools: []
+provides_hooks:
+  - pre_llm_call
+provides_middleware: []
+config_schema:
+  mode:
+    type: str
+    default: "off"
+    description: "off | auto (route when the key is present) | on"
+  shadow:
+    type: bool
+    default: false
+    description: "pm-agent patch: decide and log in the background, inject nothing"
+  gate:
+    type: float
+    default: 0.30
+    description: "Mean of the three request judgments; below it nothing is suggested"
+  fits:
+    type: float
+    default: 0.40
+    description: "Each candidate's own 'does it fit' judgment; the winner below it silences the turn, others below it are dropped"
+  shortlist:
+    type: int
+    default: 3
+  chunk:
+    type: int
+    default: 240
+    description: "Skills per Choice question (API caps one Choice at 255 options)"
+  excerpt:
+    type: int
+    default: 700
+    description: "SKILL.md characters each shortlisted candidate brings"
+  timeout_s:
+    type: float
+    default: 4.0
+    description: "Per-attempt timeout; worst case per call is 2x this plus retry_max_wait_s"
+  cache_seconds:
+    type: int
+    default: 300
+    description: "Identical calls answered from cache per window"
+  suggest_chars:
+    type: int
+    default: 4000
+    description: "Longer user messages are left alone"
+  jev_model:
+    type: str
+    default: "typesafe-ai/jev"
+  jev_base_url:
+    type: str
+    default: "https://ai-gateway.vercel.sh/v4/ai"
+  backend:
+    type: str
+    default: "auto"
+    description: "auto = TypeSafe key wins, else gateway; typesafe|gateway forces one"
+  typesafe_model:
+    type: str
+    default: "jev-latest"
+  typesafe_base_url:
+    type: str
+    default: "https://api.typesafe.ai"
+  retry_max_wait_s:
+    type: float
+    default: 2.0
+    description: "On 429/529, retry once only if Retry-After waits at most this long"
+  breaker_threshold:
+    type: int
+    default: 3
+    description: "Consecutive 429/529s before going silent"
+  breaker_cooldown_s:
+    type: int
+    default: 120
+    description: "Silence window after the breaker opens"
+  min_interval_s:
+    type: float
+    default: 0.25
+    description: "Minimum gap between outgoing Jev calls, per process"
+  roster_dir:
+    type: str
+    default: ""
+    description: "Default: <HERMES_HOME>/skills"
+  log_path:
+    type: str
+    default: ""
+    description: "Default: <HERMES_HOME>/logs/jev-skill-router.log"

@@ -1,0 +1,107 @@
+name: pm-hermes
+
+services:
+  postgres:
+    image: groonga/pgroonga:4.0.9-debian-17@sha256:bf74aa6d9ce85cd0a2d04cfac92dc524116bc4b95212d4a47b64a7da48cee36d
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      COLLECTOR_DB_PASSWORD: ${COLLECTOR_DB_PASSWORD:?}
+      HERMES_DB_PASSWORD: ${HERMES_DB_PASSWORD:?}
+      TEAM_TIMEZONE: ${TEAM_TIMEZONE:-UTC}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pm"]
+      interval: 5s
+      retries: 20
+
+  hermes:
+    build: ./hermes-agent
+    restart: unless-stopped
+    command: ["gateway", "run"]
+    # explicit list: no Telegram session, DB or Jira secrets in this container (Jira goes through jira-mcp).
+    # terminal/code/file tools stay off, so the model cannot read env.
+    environment:
+      LLM_API_KEY: ${LLM_API_KEY:?}
+      LLM_BASE_URL: ${LLM_BASE_URL:?}
+      AGENT_MODEL: ${AGENT_MODEL:?}
+      # TypeSafe Jev routing (pm_router, jev-skill-router). Empty = no Jev calls (pm_router registers nothing; jev-skill-router only logs).
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:?}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:?}
+      SLACK_ALLOWED_USERS: ${SLACK_ALLOWED_USERS:-}
+      SLACK_ALLOW_ALL_USERS: ${SLACK_ALLOW_ALL_USERS:-}
+      SLACK_ALLOWED_CHANNELS: ${SLACK_ALLOWED_CHANNELS:-}
+      SLACK_HOME_CHANNEL: ${SLACK_HOME_CHANNEL:-}
+      # read-only GitHub OAuth App token for the github MCP server (README, "GitHub")
+      GITHUB_OAUTH_TOKEN: ${GITHUB_OAUTH_TOKEN:-}
+      TZ: ${TEAM_TIMEZONE:-UTC}
+      # any workspace member can chat: MEDIA: attaches only files under Hermes cache dirs (pm_export writes there).
+      # Recent-file trust off too, or fresh logs/*.log and *.db under /opt/data would be uploadable.
+      HERMES_MEDIA_DELIVERY_STRICT: "1"
+      HERMES_MEDIA_TRUST_RECENT_FILES: "0"
+      # web dashboard (image's s6 slot). Binds 0.0.0.0 in-container, so Hermes forces the basic-auth login.
+      # Empty username = provider not registered = dashboard fails closed (nothing served).
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_PUBLIC_URL: ${HERMES_DASHBOARD_PUBLIC_URL:-}
+      HERMES_DASHBOARD_BASIC_AUTH_USERNAME: ${HERMES_DASHBOARD_BASIC_AUTH_USERNAME:-}
+      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: ${HERMES_DASHBOARD_BASIC_AUTH_PASSWORD:-}
+      HERMES_DASHBOARD_BASIC_AUTH_SECRET: ${HERMES_DASHBOARD_BASIC_AUTH_SECRET:-}
+    # loopback only; put a reverse proxy (e.g. Caddy) in front of it for HTTPS
+    ports: ["127.0.0.1:9119:9119"]
+    volumes:
+      - ./data/hermes:/opt/data
+      - ./hermes/config.yaml:/opt/data/config.yaml
+      - ./hermes/SOUL.md:/opt/data/SOUL.md:ro
+      - ./hermes/skills/team-history:/opt/data/skills/team-history:ro
+      - ./hermes/plugins/pm_export:/opt/data/plugins/pm_export:ro
+      - ./hermes/plugins/pm_slack:/opt/data/plugins/pm_slack:ro
+      - ./hermes/plugins/pm_router:/opt/data/plugins/pm_router:ro
+      - ./hermes/plugins/jev-skill-router:/opt/data/plugins/jev-skill-router:ro
+    depends_on: [pgmcp, jira-mcp]
+
+  pgmcp:
+    image: crystaldba/postgres-mcp:0.3.0
+    restart: unless-stopped
+    command: ["--access-mode=unrestricted", "--transport=sse"]
+    environment:
+      DATABASE_URI: postgresql://hermes:${HERMES_DB_PASSWORD:?}@postgres:5432/pm
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  jira-mcp:
+    # pinned to the version running when verified (0.23.1); latest drifts and its default toolsets change
+    image: ghcr.io/sooperset/mcp-atlassian:0.23.1
+    restart: unless-stopped
+    command: ["--transport", "sse", "--port", "9000"]
+    environment:
+      JIRA_URL: ${JIRA_BASE_URL}
+      JIRA_USERNAME: ${JIRA_EMAIL}
+      JIRA_API_TOKEN: ${JIRA_API_TOKEN}
+      JIRA_PROJECTS_FILTER: ${JIRA_PROJECT}
+      # server-side creds on sse need this; port 9000 is not published, only the compose network reaches it
+      ALLOW_GLOBAL_CRED_FALLBACK: "true"
+      TOOLSETS: all  # explicit, silences the default-change warning; ENABLED_TOOLS does the real filtering
+      # allowlist: reads + create/update/comment only. No delete, links, watchers, move, transition, batch, Confluence.
+      ENABLED_TOOLS: jira_search,jira_get_issue,jira_get_project_issues,jira_get_all_projects,jira_search_projects,jira_get_transitions,jira_get_project_issue_types,jira_get_create_fields,jira_get_user_profile,jira_search_assignable_users,jira_search_fields,jira_create_issue,jira_update_issue,jira_add_comment,jira_edit_comment
+
+
+  collector:
+    build: ./collector
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://collector:${COLLECTOR_DB_PASSWORD:?}@postgres:5432/pm
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:-}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:-}
+      TELEGRAM_SESSION_STRING: ${TELEGRAM_SESSION_STRING:-}
+      TELEGRAM_GROUPS: ${TELEGRAM_GROUPS:-}
+      BACKFILL_LIMIT: ${BACKFILL_LIMIT:-}
+    depends_on:
+      postgres:
+        condition: service_healthy

@@ -1,0 +1,8 @@
+[project]
+name = "hermes-jev-skill-router"
+version = "0.1.0"
+description = "Typed skill routing via TypeSafe Jev on the Vercel AI Gateway (Hermes Agent plugin)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = []

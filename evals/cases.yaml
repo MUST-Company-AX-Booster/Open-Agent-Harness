@@ -1,0 +1,22 @@
+# One case per item. Every value is JSON (strings in double quotes).
+# must_contain: list of any-of groups; every group needs at least one hit (case-insensitive).
+# must_not_contain: strings that fail the case. image: a file under evals/ or null.
+# Replace these with real questions about your team's history once the collector has data.
+- id: "export-md"
+  image: null
+  question: "Write this week's team summary as a markdown file"
+  must_contain: [["MEDIA:/opt/data/cache/documents/exports/"], [".md"]]
+  must_not_contain: []
+  note: "pm_export plugin: answer must carry a MEDIA: tag for a saved .md under the exports dir."
+- id: "export-zip"
+  image: null
+  question: "Make two documents, this week's summary and the open Jira issues, and send them as a zip"
+  must_contain: [["MEDIA:/opt/data/cache/documents/exports/"], [".zip"]]
+  must_not_contain: []
+  note: "pm_export plugin: save_zip with two documents."
+- id: "not-found"
+  image: null
+  question: "What did the team decide about the purple elephant migration?"
+  must_contain: [["not find", "couldn't find", "could not find", "no messages", "nothing"]]
+  must_not_contain: []
+  note: "A topic nobody discussed: the answer must say so instead of guessing."
