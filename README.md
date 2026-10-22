@@ -1,100 +1,186 @@
+<div align="center">
+
 # Open Agent Harness
 
-A self-hosted PM agent for your team, built on [Hermes Agent](https://github.com/NousResearch/hermes-agent).
-Ask it a question in Slack and it answers from your team's Slack and Telegram history, Jira, Notion and GitHub,
-with a source for every fact.
+**Any project. Any domain. Start with Open Agent.**
 
-It began as the PM agent for one production team. This repository is that same system with the team-specific
-parts taken out, so any team can run its own copy. You configure it through two files: `.env` for keys and
-`hermes/SOUL.md` for what the agent should know about your team.
+A self-hosted Slack assistant for searching team conversations, issues, docs, and code.
+Built on [Hermes Agent](https://github.com/NousResearch/hermes-agent).
 
-![How the assistant connects the team](docs/architecture.png)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Deployment: Docker Compose](https://img.shields.io/badge/Deployment-Docker_Compose-2496ED?logo=docker&logoColor=white)](#quick-start)
+[![Documentation](https://img.shields.io/badge/Documentation-Read_the_docs-526CFE)](#configuration)
+[![Quick Start](https://img.shields.io/badge/Quick_Start-Get_started-2EA44F)](#quick-start)
 
-## What it can do
+[Integrations](#configuration) · [Architecture](#architecture) · [Security](#security) · [Contributing](#contributing)
 
-- Answer questions about past discussions: what was decided, who owns a task, what is still open.
-- Read Slack and Telegram history, Jira issues, Notion pages and GitHub repositories, and cite each source.
-- Write a nightly summary of every active channel, then read those summaries first when answering.
-- Create and update Jira issues after the person asking confirms.
-- Send long answers as `.md` or `.zip` files in Slack.
-- Pick a cheaper or stronger model for each message (optional Jev router).
+</div>
 
-## Architecture
+Ask a question in Slack. Open Agent searches collected Slack and Telegram history and, when configured,
+Jira, GitHub, and Notion. Its instructions require source references and a clear distinction between
+proposals and decisions. Longer reports can be attached as Markdown or ZIP files.
 
-Everything runs with Docker Compose on one machine.
+Run it with Docker Compose. Add credentials to [`.env`](.env.example) and describe your project in
+[`hermes/SOUL.md`](hermes/SOUL.md).
 
-| Component | Role |
+## Meet Open Agent
+
+Six mascots represent the assistant's roles. They are branding concepts, not separate agents.
+
+| Fox | Owl | Border collie | Elephant | Otter | Raven |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| [![Fox logo: plum and ivory curled fox on an orange background](docs/icon-concepts/32-fox-curled.png)](docs/icon-concepts/32-fox-curled.png) | [![Owl logo: navy owl on a golden background](docs/icon-concepts/34-animal-owl.png)](docs/icon-concepts/34-animal-owl.png) | [![Border collie logo: navy dog on a blue background](docs/icon-concepts/35-animal-collie.png)](docs/icon-concepts/35-animal-collie.png) | [![Elephant logo: plum elephant on an apricot background](docs/icon-concepts/36-animal-elephant.png)](docs/icon-concepts/36-animal-elephant.png) | [![Otter logo: forest-green otter on a mint background](docs/icon-concepts/37-animal-otter.png)](docs/icon-concepts/37-animal-otter.png) | [![Raven logo: plum raven on a periwinkle background](docs/icon-concepts/38-animal-raven.png)](docs/icon-concepts/38-animal-raven.png) |
+| Solve problems | Find knowledge | Coordinate work | Remember decisions | Help the team | Connect the clues |
+
+## What you can ask
+
+Try these after connecting your sources:
+
+| Ask in Slack | What the agent looks for |
 |---|---|
-| **Hermes** (`hermes`) | The assistant. Answers in Slack over Socket Mode, runs scheduled jobs and serves the optional web dashboard. |
-| **Message collector** (`collector`) | Saves Slack messages every 5 minutes and Telegram messages as they arrive. |
-| **PostgreSQL + PGroonga** (`postgres`) | Stores messages and nightly summaries. PGroonga gives full-text search in English, Korean, Japanese and Chinese. |
-| **History connector** (`pgmcp`) | Postgres MCP server. Hermes reads history through a database user that can only write to `summaries`. |
-| **Jira connector** (`jira-mcp`) | Jira MCP server, limited to reading, creating, updating and commenting. |
-| **GitHub, Notion** | Hosted MCP servers, read-only. Off by default. |
-| **Jev router** | Optional [TypeSafe Jev](https://docs.typesafe.ai) plugin that chooses the model and reasoning effort per message. |
+| “What did we decide about the onboarding flow last week?” | Discussions and dates that show what was proposed and what was agreed. |
+| “Who owns this bug, and what is blocking it?” | Jira status, assignee, and related team discussions. |
+| “What shipped this week?” | GitHub changes, Jira issues, and recent team updates. |
+| “Turn this discussion into a Jira issue.” | An issue draft for you to confirm before it writes to Jira. |
+| “Give me the full report as a Markdown file.” | A downloadable file attached to the Slack reply. |
 
-The model can be any OpenAI-compatible API that supports tool calling. The diagram shows the original
-deployment, which used NeuralWatt.
+The assistant can only answer from the sources and history it can access.
+
+## What it does
+
+- Collects Slack history every five minutes and Telegram messages as they arrive.
+- Searches messages in PostgreSQL with PGroonga. Scheduled summaries help it find older discussions.
+- Answers channel mentions and direct messages from allowed Slack users through Socket Mode.
+- Reads connected Jira, GitHub, and Notion sources. Jira writes require confirmation under the bundled instructions.
+- Runs scheduled jobs and exports reports to Slack.
+- Uses an OpenAI-compatible model with tool calling. Optional TypeSafe Jev routing selects a model and reasoning effort per message.
+
+The message database runs on your infrastructure. Relevant content is sent to your model provider and
+connected services. See [Security](#security) for access and data-handling limits.
 
 ## Quick start
 
-**Using Claude Code?** Open the cloned repository in Claude Code and run `/onboard-agent`. The bundled skill
-(`.claude/skills/onboard-agent/`) asks for what it needs, fills in `.env` and `hermes/SOUL.md`, sets up the
-integrations you choose, and walks you through starting the stack or deploying it to a server. The manual steps
-are below.
+You need Git, Docker with the Compose plugin, permission to install a Slack app, and an API key for a
+model that supports tool calling.
 
-**Requirements:** Docker, git, a Slack workspace where you can install apps, and an API key for a model provider.
+### 1. Clone and configure
 
 ```bash
-# 1. Clone with the Hermes submodule
 git clone --recurse-submodules https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness.git
 cd Open-Agent-Harness
-
-# 2. Add your keys (model, database passwords, Slack)
 cp .env.example .env
+```
 
-# 3. Describe your team in the "About the project" block of hermes/SOUL.md
+Edit `.env` before starting the stack:
 
-# 4. Start the stack
-mkdir -p data/hermes/skills/team-history && touch data/hermes/config.yaml   # first run only
+| Setting | What to supply |
+|---|---|
+| `LLM_API_KEY`, `LLM_BASE_URL`, `AGENT_MODEL` | Your model provider credentials, endpoint, and model name. |
+| `POSTGRES_PASSWORD`, `COLLECTOR_DB_PASSWORD`, `HERMES_DB_PASSWORD` | Three separate passwords; generate each with `openssl rand -hex 24`. |
+| `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN` | Tokens from your [Slack app setup](#slack). |
+| `SLACK_ALLOWED_USERS` | Comma-separated Slack member IDs, or set `SLACK_ALLOW_ALL_USERS=true` for workspace access. |
+| `TEAM_TIMEZONE` | Your team's IANA time zone, such as `Asia/Kolkata`. Defaults to `UTC`. |
+
+In the **About the project** block of [`hermes/SOUL.md`](hermes/SOUL.md), describe your project, team,
+and internal terms. Include your GitHub organization and Notion start page if you use those connectors.
+
+Jira is optional, but its service is included in the default stack. Configure it or follow the
+[removal steps](#jira) before starting without Jira.
+
+> [!TIP]
+> **Using Claude Code?** After cloning, open the repository and run `/onboard-agent`. The
+> [bundled onboarding skill](.claude/skills/onboard-agent/SKILL.md) walks through credentials, team
+> instructions, integrations, and deployment. Continue below for manual setup.
+
+### 2. Start the services
+
+Create the bind-mount paths, then start the stack:
+
+```bash
+mkdir -p data/hermes/skills/team-history
+touch data/hermes/config.yaml
 docker compose up -d --build
 docker compose ps
+```
 
-# 5. Schedule the nightly summary (01:00 in TEAM_TIMEZONE)
+Docker Desktop needs the host file to exist before mounting it. The agent uses the committed
+[`hermes/config.yaml`](hermes/config.yaml); `data/hermes/config.yaml` is the mount target.
+
+### 3. Ask your first question
+
+Invite your bot to a Slack channel with `/invite @PM-Agent`, then mention it:
+
+```text
+@PM-Agent What has this channel discussed recently? Include your sources.
+```
+
+Replace `PM-Agent` with your bot's name. Slack collection runs every five minutes, so recent messages may
+not be available yet. Check startup errors with `docker compose logs -f hermes collector`.
+
+### 4. Enable nightly summaries
+
+Schedule a summary at **01:00 in `TEAM_TIMEZONE`**:
+
+```bash
 docker compose exec hermes hermes cron create "0 1 * * *" "$(cat hermes/cron/nightly-summaries.md)" \
   --name nightly-summaries --skill team-history
 ```
 
-Invite the bot to a channel with `/invite @PM-Agent` and mention it with a question.
+## Architecture
 
-The `mkdir` and `touch` line is needed once because Docker Desktop cannot bind-mount a file whose host path
-does not exist.
+![Architecture of the original deployment: team sources, Hermes, and the history database](docs/architecture.png)
+
+The diagram uses NeuralWatt from the original deployment. Set your own OpenAI-compatible endpoint in
+`.env`. Local services are defined in [`docker-compose.yml`](docker-compose.yml).
+
+| Component | Role |
+|---|---|
+| **Hermes** (`hermes`) | Slack gateway, agent runtime, scheduled jobs, and optional web dashboard. |
+| **Message collector** (`collector`) | Polls Slack and listens for Telegram messages, then stores history in PostgreSQL. |
+| **PostgreSQL + PGroonga** (`postgres`) | Message and summary storage, with full-text search for English, Korean, Japanese, and Chinese. |
+| **History connector** (`pgmcp`) | Postgres MCP server using a database role that reads history and writes only to `summaries`. |
+| **Jira connector** (`jira-mcp`) | MCP server with an allowlist for reading, creating, updating, and commenting on issues. |
+| **GitHub and Notion** | Optional hosted MCP connections. GitHub is read-only; Notion also supports the optional request-list workflow. |
+| **Jev router** | Optional model and skill selection through TypeSafe. |
+
+The collector stores Slack and Telegram history in PostgreSQL. The agent reads summaries first, then
+searches messages for detail. It queries Jira, GitHub, and Notion through MCP connectors as needed.
 
 ## Configuration
 
-| Integration | Required | Where |
+| Integration | Setup | Configuration |
 |---|---|---|
-| Model | Yes | `.env`: `LLM_API_KEY`, `LLM_BASE_URL`, `AGENT_MODEL` |
-| Database | Yes | `.env`: three passwords (`openssl rand -hex 24`) |
-| Slack | Yes | `.env`: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, allowed users |
-| Telegram | No | `.env`: `TELEGRAM_*` |
-| Jira | No | `.env`: `JIRA_*` |
-| GitHub | No | `.env`: `GITHUB_OAUTH_TOKEN`, plus `enabled: true` in `hermes/config.yaml` |
-| Notion | No | `enabled: true` in `hermes/config.yaml`, then a one-time login |
-| Jev router | No | `.env`: `TYPESAFE_API_KEY`, plus a model ladder in `hermes/config.yaml` |
-| Web dashboard | No | `.env`: `HERMES_DASHBOARD_*` |
+| <img src="docs/integration-icons/model.svg" width="24" height="24" align="absmiddle" alt="">&nbsp; **[Model](#model)** | **Required** | `.env`<br>`LLM_API_KEY`, `LLM_BASE_URL`, `AGENT_MODEL` |
+| <img src="docs/integration-icons/database.svg" width="24" height="24" align="absmiddle" alt="">&nbsp; **Database** | **Required** | `.env`<br>three passwords (`openssl rand -hex 24`) |
+| <img src="docs/integration-icons/slack.svg" width="24" height="24" align="absmiddle" alt="">&nbsp; **[Slack](#slack)** | **Required** | `.env`<br>`SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, allowed users |
+| <img src="docs/integration-icons/telegram.svg" width="24" height="24" align="absmiddle" alt="">&nbsp; **[Telegram](#telegram)** | Optional | `.env`<br>`TELEGRAM_*` |
+| <img src="docs/integration-icons/jira.svg" width="24" height="24" align="absmiddle" alt="">&nbsp; **[Jira](#jira)** | Optional | `.env`<br>`JIRA_*` |
+| <img src="docs/integration-icons/github.svg" width="24" height="24" align="absmiddle" alt="">&nbsp; **[GitHub](#github)** | Optional | `.env`<br>`GITHUB_OAUTH_TOKEN`, plus `enabled: true` in `hermes/config.yaml` |
+| <img src="docs/integration-icons/notion.svg" width="24" height="24" align="absmiddle" alt="">&nbsp; **[Notion](#notion)** | Optional | `enabled: true` in `hermes/config.yaml`, then a one-time login |
+| <img src="docs/integration-icons/jev-router.svg" width="24" height="24" align="absmiddle" alt="">&nbsp; **[Jev router](#jev-router)** | Optional | `.env`<br>`TYPESAFE_API_KEY`, plus a model ladder in `hermes/config.yaml` |
+| <img src="docs/integration-icons/web-dashboard.svg" width="24" height="24" align="absmiddle" alt="">&nbsp; **[Web dashboard](#web-dashboard)** | Optional | `.env`<br>`HERMES_DASHBOARD_*` |
 
-### Model
+### Integration setup
 
-Set `LLM_BASE_URL` to your provider's OpenAI-compatible endpoint, for example `https://api.openai.com/v1` or
-`https://openrouter.ai/api/v1`. Each answer takes several search and read steps, so choose a model that is good
-at tool calling. Reasoning effort is `agent.reasoning_effort` in `hermes/config.yaml` (default `high`). To fall
-back to a second model when the first fails, add it under `fallback_providers`.
+Expand an integration for its setup instructions.
 
-If your team writes in a language other than English, test the model in that language first. Some models that
-call tools well in English return empty answers in other languages.
+<a id="model"></a>
+<details>
+<summary><img src="docs/integration-icons/model.svg" width="22" height="22" align="absmiddle" alt="">&nbsp; <strong>Model</strong></summary>
 
-### Slack
+Set `LLM_BASE_URL` to your provider's OpenAI-compatible endpoint, such as `https://api.openai.com/v1` or
+`https://openrouter.ai/api/v1`. Use a model that can reliably call tools across several search and read steps.
+Set `agent.reasoning_effort` in `hermes/config.yaml` (default `high`). Add a second model under
+`fallback_providers` if you need a fallback.
+
+Test the model with questions in your team's language. Tool calling can work in English and still fail or
+return empty answers in another language.
+
+</details>
+
+<a id="slack"></a>
+<details>
+<summary><img src="docs/integration-icons/slack.svg" width="22" height="22" align="absmiddle" alt="">&nbsp; <strong>Slack</strong></summary>
 
 Hermes connects over Socket Mode, so the server needs no public URL.
 
@@ -111,10 +197,14 @@ Hermes connects over Socket Mode, so the server needs no public URL.
    it (`xapp-…`) in `SLACK_APP_TOKEN`.
 5. Set `SLACK_ALLOWED_USERS` to a list of member IDs, or `SLACK_ALLOW_ALL_USERS=true`.
 
-Run one copy of the stack per Slack app. Slack splits events between Socket Mode connections, so two copies
-would each miss messages. In channels the bot answers only when mentioned; it always answers direct messages.
+Run one stack per Slack app. Slack splits events between Socket Mode connections, so multiple stacks can
+miss messages. The bot responds to channel mentions and direct messages, subject to the user allowlist.
 
-### Telegram
+</details>
+
+<a id="telegram"></a>
+<details>
+<summary><img src="docs/integration-icons/telegram.svg" width="22" height="22" align="absmiddle" alt="">&nbsp; <strong>Telegram</strong></summary>
 
 The collector reads groups as a regular user account, so it sees what a member sees.
 
@@ -128,17 +218,25 @@ docker compose up -d collector
 The session string is a full login to that account. Store it like a password and never use one session in two
 running programs.
 
-### Jira
+</details>
+
+<a id="jira"></a>
+<details>
+<summary><img src="docs/integration-icons/jira.svg" width="22" height="22" align="absmiddle" alt="">&nbsp; <strong>Jira</strong></summary>
 
 Set `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` (create one at
 id.atlassian.com/manage-profile/security/api-tokens) and `JIRA_PROJECT`. The agent acts as that account and sees
-only that project. It asks for confirmation before it creates or changes an issue, and it cannot delete, move or
-transition issues (see `ENABLED_TOOLS` in `docker-compose.yml`).
+only that project. The bundled instructions require confirmation before creating or changing an issue. The connector excludes
+delete, move, and transition tools (see `ENABLED_TOOLS` in `docker-compose.yml`).
 
 If you don't use Jira, remove the `jira-mcp` service and its entry in `hermes`' `depends_on` from
 `docker-compose.yml`, and the `jira:` block under `mcp_servers` in `hermes/config.yaml`.
 
-### GitHub
+</details>
+
+<a id="github"></a>
+<details>
+<summary><img src="docs/integration-icons/github.svg" width="22" height="22" align="absmiddle" alt="">&nbsp; <strong>GitHub</strong></summary>
 
 1. Create a GitHub OAuth App with **Enable Device Flow** ticked and put its client ID in `GITHUB_OAUTH_CLIENT_ID`.
 2. Request a token. The scope `read:org read:user` sees public repositories; private ones need `repo`.
@@ -153,10 +251,14 @@ If you don't use Jira, remove the `jira-mcp` service and its entry in `hermes`' 
    organization in `hermes/SOUL.md`, and run `docker compose up -d` (a plain `restart` keeps the old `.env`
    values).
 
-The token does not expire and acts as the account that approved it. The `X-MCP-Readonly` header keeps every
-GitHub tool read-only.
+The token uses the approving account's permissions. Keep it secret and revoke it when no longer needed.
+The `X-MCP-Readonly` header restricts the GitHub connector to reads.
 
-### Notion
+</details>
+
+<a id="notion"></a>
+<details>
+<summary><img src="docs/integration-icons/notion.svg" width="22" height="22" align="absmiddle" alt="">&nbsp; <strong>Notion</strong></summary>
 
 Set `enabled: true` under `mcp_servers.notion`, then log in once. The token is saved in `data/hermes/mcp-tokens/`.
 
@@ -178,22 +280,31 @@ Replace every `<...>` in the prompt, name the database in `hermes/SOUL.md`, then
 docker compose exec hermes hermes cron create "0 9,23 * * *" "$(cat hermes/cron/task-list.md)" --name task-list
 ```
 
-### Jev router
+</details>
 
-Both Jev plugins stay off until `TYPESAFE_API_KEY` is set.
+<a id="jev-router"></a>
+<details>
+<summary><img src="docs/integration-icons/jev-router.svg" width="22" height="22" align="absmiddle" alt="">&nbsp; <strong>Jev router</strong></summary>
 
-- **`pm_router`** chooses the model and reasoning effort for each Slack message, from a cheap model for "thanks"
-  to a strong one for sprint planning. Uncomment the seven rungs under `plugins.entries.pm_router.settings.rungs`
+Both Jev plugins are disabled until you set `TYPESAFE_API_KEY`.
+
+- **`pm_router`** chooses a model and reasoning effort for each Slack message. Uncomment the seven rungs under `plugins.entries.pm_router.settings.rungs`
   in `hermes/config.yaml` and fill in models your provider offers. Routing stays off until all seven are valid.
   With `mode: shadow` it only logs its choices to `data/hermes/logs/pm_router.jsonl`.
 - **`jev-skill-router`** tells the agent which skills fit the message.
 
 Both send the message text to TypeSafe, and `pm_router` also sends up to 2,000 characters of the thread.
 
-### Web dashboard
+</details>
 
-Set the `HERMES_DASHBOARD_*` values to turn it on. It listens on `127.0.0.1:9119`; to reach it from another
-machine, put a reverse proxy with HTTPS (for example Caddy) in front of it.
+<a id="web-dashboard"></a>
+<details>
+<summary><img src="docs/integration-icons/web-dashboard.svg" width="22" height="22" align="absmiddle" alt="">&nbsp; <strong>Web dashboard</strong></summary>
+
+Set `HERMES_DASHBOARD_*` to enable it. The dashboard listens on `127.0.0.1:9119`. For access from another
+machine, use a reverse proxy with HTTPS, such as Caddy.
+
+</details>
 
 ## Customizing the agent
 
@@ -210,12 +321,19 @@ changing `.env`, run `docker compose up -d` instead; `restart` keeps the old val
 
 ## Security
 
-- On Slack the agent has no shell, code execution or file access, and it cannot search other people's chats.
+- The Slack tool configuration disables shell, code execution, general file access, memory, and session search.
+  Dedicated plugins can read channel messages and write report files for delivery.
 - Hermes reads the database as a user that can read messages but write only to `summaries`. Run
   `./db/check_permissions.sh` to verify.
 - Each container receives only the secrets it needs. The Telegram session and database passwords never reach
   the `hermes` container.
-- The agent treats text it reads from Slack, Notion, GitHub or the web as data and ignores instructions inside it.
+- The bundled instructions tell the agent to treat retrieved content as data and ignore embedded instructions.
+  This is a behavioral instruction, not a guarantee against prompt injection.
+- Shared collected history is available through the team database. Slack user restrictions control who can
+  use the bot; do not assume per-user source permissions are enforced on stored messages. Connect only sources
+  appropriate for the users you allow.
+- Relevant source content goes to your model provider. Hosted MCP services handle connector requests; optional
+  Jev routing also sends message text to TypeSafe (see [Jev router](#jev-router)).
 - `.env` and `data/` are git-ignored. Never commit them.
 
 ## Operations
@@ -257,6 +375,26 @@ docker compose run --rm --no-deps collector pytest -q
 cd hermes/plugins && for t in test_pm_*.py; do python3 -m unittest -q "$t"; done && cd ../..
 python3 hermes/plugins/jev-skill-router/tests/test_offline.py
 ```
+
+## Repository guide
+
+| Path | Purpose |
+|---|---|
+| [`collector/`](collector/) | Slack polling, Telegram collection, and collector tests. |
+| [`db/`](db/) | Database initialization and permission checks. |
+| [`hermes/`](hermes/) | Team instructions, runtime configuration, plugins, skills, and cron prompts. |
+| [`hermes-agent/`](hermes-agent/) | Upstream Hermes runtime, pinned as a Git submodule. |
+| [`evals/`](evals/) | Questions for checking answer quality against your connected sources. |
+| [`.claude/skills/onboard-agent/`](.claude/skills/onboard-agent/) | Guided setup and deployment workflow for Claude Code. |
+
+## Contributing
+
+- [Report a bug](https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness/issues) with reproduction steps,
+  the affected service, and redacted logs. Leave out tokens, session strings, and private team messages.
+- For code changes, include a focused test and run the relevant [test commands](#tests).
+- For answer-quality changes, add a representative question to [`evals/cases.yaml`](evals/cases.yaml)
+  and check it against your own sources.
+- Keep credentials in `.env` and deployment state in `data/`; neither belongs in a pull request.
 
 ## Credits and license
 
