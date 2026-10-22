@@ -38,6 +38,11 @@ deployment, which used NeuralWatt.
 
 ## Quick start
 
+**Using Claude Code?** Open the cloned repository in Claude Code and run `/onboard-agent`. The bundled skill
+(`.claude/skills/onboard-agent/`) asks for what it needs, fills in `.env` and `hermes/SOUL.md`, sets up the
+integrations you choose, and walks you through starting the stack or deploying it to a server. The manual steps
+are below.
+
 **Requirements:** Docker, git, a Slack workspace where you can install apps, and an API key for a model provider.
 
 ```bash
@@ -93,7 +98,8 @@ call tools well in English return empty answers in other languages.
 
 Hermes connects over Socket Mode, so the server needs no public URL.
 
-1. Generate an app manifest. This needs `.env` filled in but does not start the bot:
+1. Generate an app manifest. Docker Compose refuses to run while required `.env` values are empty, so until you
+   have real tokens set `SLACK_BOT_TOKEN=pending` and `SLACK_APP_TOKEN=pending`. This does not start the bot:
    ```bash
    docker compose run --rm --no-deps --entrypoint /opt/hermes/.venv/bin/hermes hermes \
      slack manifest --name PM-Agent --agent-view
@@ -144,7 +150,8 @@ If you don't use Jira, remove the `jira-mcp` service and its entry in `hermes`' 
      -d "client_id=$GITHUB_OAUTH_CLIENT_ID&device_code=<device_code>&grant_type=urn:ietf:params:oauth:grant-type:device_code"
    ```
 3. Put the `access_token` in `GITHUB_OAUTH_TOKEN`, set `enabled: true` under `mcp_servers.github`, name your
-   organization in `hermes/SOUL.md`, and run `docker compose restart hermes`.
+   organization in `hermes/SOUL.md`, and run `docker compose up -d` (a plain `restart` keeps the old `.env`
+   values).
 
 The token does not expire and acts as the account that approved it. The `X-MCP-Readonly` header keeps every
 GitHub tool read-only.
@@ -198,7 +205,8 @@ machine, put a reverse proxy with HTTPS (for example Caddy) in front of it.
 | `hermes/cron/*.md` | Prompts for scheduled jobs. |
 | `hermes/plugins/` | `pm_slack` (live Slack reads, status line, Stop button), `pm_export` (file answers), `pm_router`, `jev-skill-router`. |
 
-After editing, run `docker compose restart hermes`. `docker compose up -d` does not pick up config-only changes.
+After editing these files, run `docker compose restart hermes`; `docker compose up -d` does not reload them. After
+changing `.env`, run `docker compose up -d` instead; `restart` keeps the old values.
 
 ## Security
 
