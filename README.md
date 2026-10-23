@@ -31,7 +31,7 @@ Run it with Docker Compose. Add credentials to [`.env`](.env.example) and descri
 
 <video src="docs/readme-intro.mp4" width="640" height="360" controls preload="metadata"></video>
 
-<p><a href="docs/readme-intro.mp4">Watch the 26-second video</a></p>
+<p><a href="docs/readme-intro.mp4">Watch the 35-second video</a></p>
 
 </div>
 
@@ -426,15 +426,15 @@ python3 hermes/plugins/jev-skill-router/tests/test_offline.py
 
 ## Contributing
 
-- [Report a bug](https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness/issues) with reproduction steps,
-  the affected service, and redacted logs. Leave out tokens, session strings, and private team messages.
-- For code changes, include a focused test and run the relevant [test commands](#tests).
-- For answer-quality changes, add a representative question to [`evals/cases.yaml`](evals/cases.yaml)
-  and check it against your own sources.
-- Keep credentials in `.env` and deployment state in `data/`; neither belongs in a pull request.
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request, and follow the
+  [Code of Conduct](CODE_OF_CONDUCT.md).
+- Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), not in a public issue.
+- [GOVERNANCE.md](GOVERNANCE.md) names the maintainer, the response times, and what we promise never to close.
 
 ## Credits and license
 
+- Built and maintained by Abhijit Rao ([@must-aero](https://github.com/must-aero)) and Yashal Nawid
+  ([@must-zaffreblue](https://github.com/must-zaffreblue)) at MUST Company. See [GOVERNANCE.md](GOVERNANCE.md).
 - [Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous Research (MIT), included as a git submodule.
 - `hermes/plugins/jev-skill-router` by DoGMaTiiC (MIT), vendored with small changes.
 - All other code is released under the MIT License. See [LICENSE](LICENSE).
