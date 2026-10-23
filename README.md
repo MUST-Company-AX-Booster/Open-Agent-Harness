@@ -426,12 +426,10 @@ python3 hermes/plugins/jev-skill-router/tests/test_offline.py
 
 ## Contributing
 
-- [Report a bug](https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness/issues) with reproduction steps,
-  the affected service, and redacted logs. Leave out tokens, session strings, and private team messages.
-- For code changes, include a focused test and run the relevant [test commands](#tests).
-- For answer-quality changes, add a representative question to [`evals/cases.yaml`](evals/cases.yaml)
-  and check it against your own sources.
-- Keep credentials in `.env` and deployment state in `data/`; neither belongs in a pull request.
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request, and follow the
+  [Code of Conduct](CODE_OF_CONDUCT.md).
+- Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), not in a public issue.
+- [GOVERNANCE.md](GOVERNANCE.md) names the maintainer, the response times, and what we promise never to close.
 
 ## Credits and license
 
