@@ -27,13 +27,7 @@ Run it with Docker Compose. Add credentials to [`.env`](.env.example) and descri
 
 ## Intro video
 
-<div align="center">
-
-<video src="docs/readme-intro.mp4" width="640" height="360" controls preload="metadata"></video>
-
-<p><a href="docs/readme-intro.mp4">Watch the 35-second video</a></p>
-
-</div>
+https://github.com/user-attachments/assets/95bac865-b353-4ef2-b027-3383b1c467c8
 
 ## Meet Open Agent
 
