@@ -1,7 +1,7 @@
-name: pm_slack
+name: oa_slack
 version: 1.0.0
 description: "Live Slack fallback when the team database misses: read one linked message/thread, or a channel's newest messages. Channels only, never DMs. Also fixes the Slack working-status line and makes Slack's Stop button stop the run."
-author: PM-Agent
+author: Open-Agent
 provides_tools:
   - slack_read_link
   - slack_recent

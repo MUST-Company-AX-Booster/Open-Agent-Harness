@@ -1,7 +1,7 @@
-name: pm_router
+name: oa_router
 version: 1.0.0
 description: "Jev routing for Slack: picks the model and reasoning effort on every new message; the thread's model goes down only for a sure, standalone easier request. mode: shadow logs only, apply also sets them."
-author: PM-Agent
+author: Open-Agent
 provides_hooks:
   - pre_gateway_dispatch
   - on_session_end

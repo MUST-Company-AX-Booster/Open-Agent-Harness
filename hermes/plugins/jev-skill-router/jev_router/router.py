@@ -4,7 +4,7 @@ Request 1 ranks the whole roster with one Choice and scores the request with thr
 booleans (a gate: does this turn want a skill at all?). Request 2 re-reads the top
 three with each candidate's own SKILL.md excerpt plus one absolute `fits` judgment
 per candidate. Two requests, two thresholds. The winner plus every other shortlisted
-candidate that also passes `fits` come back (pm-agent patch: upstream returns the winner only).
+candidate that also passes `fits` come back (open-agent patch: upstream returns the winner only).
 
 Question text, state shape and thresholds follow the published cookbook
 (docs.typesafe.ai/cookbooks/skill_suggestion) so upstream changes can be diffed.
@@ -28,7 +28,7 @@ CHOICE_INSTRUCTIONS = (
     "Which of these skills, if any, is the right one to load to help with the "
     "user's latest request?"
 )
-RERANK_INSTRUCTIONS = (  # pm-agent patch: was "Exactly one of these skills is the right one..."
+RERANK_INSTRUCTIONS = (  # open-agent patch: was "Exactly one of these skills is the right one..."
     "Which one of these skills is the best one to load for the user's latest "
     "request? Read what each actually does, not just its name."
 )
@@ -53,7 +53,7 @@ INVERTED = {"prose_suffices"}
 
 @dataclass
 class Result:
-    skills: list[str]  # winner first; pm-agent patch: upstream had a single `skill`
+    skills: list[str]  # winner first; open-agent patch: upstream had a single `skill`
     gate: float
     probability: float
     confidence: float
@@ -275,7 +275,7 @@ def suggest(
 
     if fits(chosen) < fits_threshold:
         return None
-    # pm-agent patch: a turn can need several skills, so the other candidates that pass
+    # open-agent patch: a turn can need several skills, so the other candidates that pass
     # their own `fits` judgment ride along, best fit first. The winner still gates the turn.
     others = sorted((n for n in names if n != chosen and fits(n) >= fits_threshold),
                     key=lambda n: -fits(n))

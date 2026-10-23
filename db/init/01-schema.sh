@@ -69,7 +69,7 @@ create table summaries (
 create role collector login password :'collector_pw';
 create role hermes    login password :'hermes_pw';
 
-grant connect on database pm to collector, hermes;
+grant connect on database openagent to collector, hermes;
 grant usage on schema public to collector, hermes;
 grant select, insert, update, delete
     on tg_messages, tg_sync_state, slack_messages, slack_sync_state to collector;
@@ -77,5 +77,5 @@ grant select on all tables in schema public to hermes;
 grant insert, update on summaries to hermes;
 alter role hermes set statement_timeout = '30s';
 
-alter database pm set timezone to :'tz';
+alter database openagent set timezone to :'tz';
 SQL

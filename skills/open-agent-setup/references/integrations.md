@@ -29,9 +29,9 @@ touches and the mistakes to avoid. Reload as in SKILL.md: `docker compose up -d`
 
 - `.env`: `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT` (project key). The agent acts as that
   account and only sees that project.
-- Not using Jira: remove it in three places, or `jira-mcp` crash-loops and the agent advertises tools that fail:
-  1. the whole `jira-mcp:` service in `docker-compose.yml`
-  2. `jira-mcp` from the `hermes` service's `depends_on` (leaving `depends_on: [pgmcp]`)
+- Not using Jira: remove it in three places, or `jira` crash-loops and the agent advertises tools that fail:
+  1. the whole `jira:` service in `docker-compose.yml`
+  2. `jira` from the `hermes` service's `depends_on` (leaving `depends_on: [teamdb]`)
   3. the `jira:` block under `mcp_servers` in `hermes/config.yaml`
 
   Then drop the Jira rule at the end of `hermes/skills/team-history/SKILL.md` and Jira from the sources list in
@@ -58,16 +58,16 @@ touches and the mistakes to avoid. Reload as in SKILL.md: `docker compose up -d`
 ## Jev router (optional)
 
 - `.env`: `TYPESAFE_API_KEY`.
-- `hermes/config.yaml`, under `plugins.entries.pm_router.settings`: uncomment `rungs:` and set all seven, cheapest
+- `hermes/config.yaml`, under `plugins.entries.oa_router.settings`: uncomment `rungs:` and set all seven, cheapest
   first: `quick`, `lookup`, `reasoned`, `routine`, `multi_step`, `deep`, `hardest`. Each needs `model` (the
   provider's exact id) and `effort` (one of none, minimal, low, medium, high, xhigh, max) that this model
   accepts. Add `provider:` only for a model on a different endpoint than the main one. With a missing rung,
   an unknown effort or no key, routing stays off and a warning goes to the hermes log.
 - Only use models the user named. With two models, the cheap one usually covers quick to reasoned and the strong
   one covers routine to hardest, with effort rising inside each.
-- `mode: apply` routes for real; `mode: shadow` only logs choices to `data/hermes/logs/pm_router.jsonl`, which is
+- `mode: apply` routes for real; `mode: shadow` only logs choices to `data/hermes/logs/oa_router.jsonl`, which is
   a safe first week.
-- Tell the user both Jev plugins send the message text to TypeSafe, and pm_router also sends up to 2,000
+- Tell the user both Jev plugins send the message text to TypeSafe, and oa_router also sends up to 2,000
   characters of the thread.
 
 ## Web dashboard (optional)

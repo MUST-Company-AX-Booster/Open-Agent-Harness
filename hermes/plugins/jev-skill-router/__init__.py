@@ -56,7 +56,7 @@ def _settings(ctx) -> dict:
 
     return {
         "mode": str(ctx.get_config("mode", "off") or "off").strip().lower(),
-        # pm-agent patch: shadow decides and logs off the turn's path and injects nothing
+        # open-agent patch: shadow decides and logs off the turn's path and injects nothing
         "shadow": str(ctx.get_config("shadow", False)).strip().lower() in ("true", "1", "yes", "on"),
         "gate": num("gate", 0.30, float),
         "fits": num("fits", 0.40, float),
@@ -208,7 +208,7 @@ def make_hook_handler(ctx):
             text = kwargs.get("user_message")
             if not isinstance(text, str) or not text.strip():
                 return None
-            if settings["shadow"]:  # pm-agent patch
+            if settings["shadow"]:  # open-agent patch
                 threading.Thread(target=decide, args=(settings, text), kwargs={"source": "shadow"},
                                  daemon=True).start()
                 return None

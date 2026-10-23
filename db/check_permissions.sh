@@ -2,7 +2,7 @@
 # Proves the hermes DB user can read everything, write only summaries,
 # and that PGroonga finds Korean words. Run from the repo root: ./db/check_permissions.sh
 set -uo pipefail
-q() { docker compose exec -T postgres psql -U "$1" -d pm -tAc "$2" 2>&1; }
+q() { docker compose exec -T postgres psql -U "$1" -d openagent -tAc "$2" 2>&1; }
 fail=0
 expect_ok()     { out=$(q "$1" "$2"); [[ $? -eq 0 && "$out" != *ERROR* ]] && echo "ok:   $3" || { echo "FAIL: $3 -> $out"; fail=1; }; }
 expect_denied() { out=$(q "$1" "$2"); [[ "$out" == *"permission denied"* ]] && echo "ok:   $3" || { echo "FAIL: $3 -> $out"; fail=1; }; }

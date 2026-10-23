@@ -179,7 +179,7 @@ async def test_failed_user_lookup_is_not_cached(fake):
 async def test_bot_mention_with_label_is_not_stored(fake):
     db, _, responses = fake
     responses["conversations.history"] = {
-        "ok": True, "messages": [msg(ts(), text=f"<@{BOT}|pmagent> 배포 언제 해요?")],
+        "ok": True, "messages": [msg(ts(), text=f"<@{BOT}|openagent> 배포 언제 해요?")],
     }
 
     assert await slack_poll.poll_channel("C1", "general", BOT) == 0

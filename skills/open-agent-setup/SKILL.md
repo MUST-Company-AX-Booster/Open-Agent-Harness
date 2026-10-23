@@ -1,17 +1,30 @@
 ---
-name: onboard-agent
-description: Use when someone wants to set up, configure, onboard, install, run or deploy this Open Agent Harness PM agent (Hermes + Slack) for their own team or project, including filling in .env, describing their team in SOUL.md, creating the Slack app, connecting Telegram, Jira, GitHub, Notion or Jev routing, moving it to a VPS or server, or fixing a setup that won't start. Use it even when they only say "set this up for us", "get it running", or "deploy the agent".
+name: open-agent-setup
+description: Use when someone wants to install, set up, configure, run or deploy Open Agent Harness (a self-hosted Hermes + Slack team assistant) for their team, including cloning it, filling in .env, describing their team in SOUL.md, creating the Slack app, connecting Telegram, Jira, GitHub, Notion or Jev routing, moving it to a server, or fixing a setup that won't start. Use it even when they only say "set up Open Agent", "get it running" or "deploy the agent".
 ---
 
-# Onboard the agent to a team
+# Set up Open Agent for a team
 
-You are helping a team run their own copy of this repository: a Hermes agent that answers questions in Slack from
-the team's Slack and Telegram history, Jira, Notion and GitHub. Your job is to get them from a fresh clone to a bot
-that answers in Slack, changing only what their setup needs.
+You are helping a team run their own copy of Open Agent Harness: a Hermes agent that answers questions in Slack
+from the team's Slack and Telegram history, Jira, Notion and GitHub. Get them from nothing to a bot that answers in
+Slack, changing only what their setup needs.
 
-The repository already holds everything: `docker-compose.yml`, `.env.example`, `hermes/config.yaml`,
-`hermes/SOUL.md`, and `README.md`, which has the exact command for every step. Read `README.md` once at the start;
-this skill tells you the order, the decisions and the traps.
+Paths in this file: `references/...` is next to this SKILL.md. Every other path (`README.md`, `.env`, `hermes/...`,
+`docker-compose.yml`) is in the repository clone.
+
+## 0. Get the repository
+
+If the current directory is not a clone (no `docker-compose.yml` and `hermes/SOUL.md`), clone it where the user
+wants it (default: `./open-agent`) and work from there:
+
+```bash
+git clone --recurse-submodules https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness.git open-agent
+cd open-agent
+```
+
+If `hermes-agent/` is empty, run `git submodule update --init`; the build fails without it. Check that `git` and
+`docker compose version` work; if Docker is missing, tell the user to install Docker Desktop (laptop) or see
+`references/deploy-server.md` (server). Then read `README.md` once; it has the exact command for every step.
 
 ## How to work
 
@@ -59,17 +72,19 @@ and replace them before starting the stack. The manifest command also mounts `da
 Run in this order from the repo root. Ask before running anything on a server or anything that starts the bot.
 
 ```bash
-git submodule update --init                                                  # if hermes-agent/ is empty
 mkdir -p data/hermes/skills/team-history && touch data/hermes/config.yaml    # first run only
 docker compose up -d --build
-docker compose ps                         # postgres, pgmcp, jira-mcp (if kept), hermes, collector: all "running"
-docker compose logs --tail 50 hermes      # look for the Slack connection and MCP servers connecting
+docker compose ps                         # postgres, teamdb, jira (if kept), hermes, collector: all "running"
+docker compose logs --tail 50 hermes      # look for the Slack connection and connectors connecting
 ./db/check_permissions.sh                 # every line "ok"
 docker compose exec hermes hermes cron create "0 1 * * *" "$(cat hermes/cron/nightly-summaries.md)" \
   --name nightly-summaries --skill team-history
 ```
 
 The `mkdir`/`touch` line exists because Docker Desktop cannot bind-mount a file whose host path is missing.
+
+**Upgrading an older install** (compose project `pm-hermes`, database `pm`): follow "Upgrading from pm-hermes" in
+`README.md` before the first `up`, or two stacks share `data/postgres` and the Slack app.
 
 Reloading after a change:
 
@@ -79,9 +94,10 @@ Reloading after a change:
 | `hermes/config.yaml`, `SOUL.md`, skills, plugins | `docker compose restart hermes` (`up -d` alone does not reload mounted files) |
 | `docker-compose.yml` | `docker compose up -d` |
 
-Finish with a live test: the user invites the bot (`/invite @PM-Agent`) and asks it something in a channel. The
-history is empty until the collector has run (Slack every 5 minutes, Telegram backfills on start), so a first
-answer of "nothing found" is expected. Check `docker compose logs collector` shows messages being saved.
+Finish with a live test: the user invites the bot (`/invite @Open-Agent`, or the name they gave it) and asks it
+something in a channel. The history is empty until the collector has run (Slack every 5 minutes, Telegram backfills
+on start), so a first answer of "nothing found" is expected. Check `docker compose logs collector` shows messages
+being saved.
 
 If a container keeps restarting, read its logs before changing anything. Common causes: an empty required
 variable, a wrong `LLM_BASE_URL`, a model id the provider doesn't know, or `data/postgres` left over from an

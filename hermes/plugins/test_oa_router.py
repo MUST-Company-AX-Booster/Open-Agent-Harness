@@ -15,11 +15,11 @@ import urllib.error
 from pathlib import Path
 from types import SimpleNamespace
 
-spec = importlib.util.spec_from_file_location("pm_router", Path(__file__).parent / "pm_router" / "__init__.py")
+spec = importlib.util.spec_from_file_location("oa_router", Path(__file__).parent / "oa_router" / "__init__.py")
 pr = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pr)
 
-# The tests run against one real ladder: Neuralwatt deepseek/glm, and gpt-5.6-sol over Codex OAuth for the hard rungs.
+# The tests run against one real ladder: deepseek/glm on the main endpoint, and gpt-5.6-sol over Codex OAuth for the hard rungs.
 EXAMPLE_RUNGS = {
     "quick": {"model": "deepseek-v4.1-flash", "effort": "none"},
     "lookup": {"model": "deepseek-v4.1-flash", "effort": "low"},
@@ -31,7 +31,7 @@ EXAMPLE_RUNGS = {
 }
 assert pr.set_rungs(EXAMPLE_RUNGS)
 
-# Efforts each model accepts: Neuralwatt /v1/models reasoning.accepted_efforts (2026-10-09; "medium" runs as
+# Efforts each model accepts: the provider's /v1/models reasoning.accepted_efforts (2026-10-09; "medium" runs as
 # "high" there) and, for Codex,
 # hermes-agent agent/reasoning_effort.py. The default model (glm-5.3-flash) runs a Sol rung's effort when Codex
 # is unavailable, so Sol efforts must be ones it accepts too.
@@ -149,7 +149,7 @@ class JevCallTest(unittest.TestCase):
 
 
 class FakeGateway:
-    """Just the GatewayRunner surface pm_router touches."""
+    """Just the GatewayRunner surface oa_router touches."""
 
     def __init__(self, running=False, authorized=True):
         self.conv = SimpleNamespace(model_override=None, reasoning_override=None)
@@ -201,7 +201,7 @@ LONG = "Compare this sprint's Jira tickets with the GitHub PRs and tell me what 
 class HookTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.log = Path(self.tmp.name) / "pm_router.jsonl"
+        self.log = Path(self.tmp.name) / "oa_router.jsonl"
         self.real = (pr._log_path, pr.ask_jev)
         pr._log_path = lambda: self.log
         pr._threads.clear()
@@ -268,7 +268,7 @@ class HookTest(unittest.TestCase):
         gw, pr.ask_jev = FakeGateway(), jev("deep")
         self.send(gw, event(LONG))
         pr.ask_jev = jev("routine", 0.77)
-        self.send(gw, event("summarise the thread @PM-Agent"))
+        self.send(gw, event("summarise the thread @Open-Agent"))
         self.assertEqual((gw.conv.model_override, gw.conv.reasoning_override),
                          ({"model": "glm-5.3-flash"}, {"enabled": True, "effort": "low"}))
         self.assertTrue(self.lines()[-1]["follow_up"])
@@ -441,15 +441,15 @@ class HookTest(unittest.TestCase):
         self.send(gw, event(LONG))  # shadow: Jev picks glm high, the default (no override) runs
         with unittest.mock.patch.dict(sys.modules, {"gateway": gateway, "gateway.session_context": module}):
             self.assertIsNone(pr.on_llm_output(response_text="Done.", model="glm-5.3-flash", platform="slack"))  # text untouched
-            self.assertEqual(slack.pm_route_lines, {"C1": "Jev picked: glm-5.3-flash, high  ·  Ran: glm-5.3-flash, none"})
+            self.assertEqual(slack.oa_route_lines, {"C1": "Jev picked: glm-5.3-flash, high  ·  Ran: glm-5.3-flash, none"})
             gw.conv.reasoning_override = {"enabled": True, "effort": "high"}  # same as Jev's pick: one short line
             pr.on_llm_output(response_text="Done.", model="glm-5.3-flash", platform="slack")
-            self.assertEqual(slack.pm_route_lines, {"C1": "Jev picked: glm-5.3-flash, high  ·  Ran: glm-5.3-flash, high"})
-            slack.pm_route_lines.clear()
+            self.assertEqual(slack.oa_route_lines, {"C1": "Jev picked: glm-5.3-flash, high  ·  Ran: glm-5.3-flash, high"})
+            slack.oa_route_lines.clear()
             pr.on_llm_output(response_text="Done.", model="m", platform="cli")
             pr._gateway = object()  # broken gateway: no line, reply untouched
             self.assertIsNone(pr.on_llm_output(response_text="Done.", model="m", platform="slack"))
-            self.assertEqual(slack.pm_route_lines, {})
+            self.assertEqual(slack.oa_route_lines, {})
 
     # --- edge cases beyond the plan ---
     def test_missing_text_is_not_routed(self):
@@ -546,7 +546,7 @@ class HookTest(unittest.TestCase):
         gw = FakeGateway()
         pr.ask_jev = lambda *a: names.append(threading.current_thread().name) or jev("routine")(*a)
         self.send(gw, event(LONG))
-        self.assertTrue(names[0].startswith("pm_router"), names)
+        self.assertTrue(names[0].startswith("oa_router"), names)
 
     def test_user_model_set_during_jev_call_is_not_overwritten(self):
         gw = FakeGateway()
@@ -593,7 +593,7 @@ class HookTest(unittest.TestCase):
                 return super()._session_state(key)
 
         gw, pr.ask_jev = Flaky(), jev("deep")
-        with self.assertLogs("pm_router", "WARNING") as logs:
+        with self.assertLogs("oa_router", "WARNING") as logs:
             self.send(gw, event(LONG))  # send() gathers the task: an escaping exception would raise here
         self.assertTrue(any("gone" in line for line in logs.output), logs.output)
 
@@ -658,7 +658,7 @@ class RegisterTest(unittest.TestCase):
 
     def register(self, **config):
         ctx = SimpleNamespace(get_config=lambda k, d=None: config.get(k, d), register_hook=lambda name, cb: None)
-        with self.assertLogs("pm_router", "WARNING") as logs:
+        with self.assertLogs("oa_router", "WARNING") as logs:
             pr.register(ctx)
         return logs.output
 
@@ -693,7 +693,7 @@ class RegisterTest(unittest.TestCase):
                                         register_hook=lambda name, cb: hooks.append(name)))
             self.assertIn("transform_llm_output", hooks)
             hooks.clear()
-            with self.assertLogs("pm_router", "WARNING"):
+            with self.assertLogs("oa_router", "WARNING"):
                 pr.register(SimpleNamespace(get_config=lambda k, d=None: {"mode": "apply"}.get(k, d),
                                             register_hook=lambda name, cb: hooks.append(name)))
             self.assertEqual(hooks, [])  # key but no ladder: routing off

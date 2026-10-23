@@ -16,7 +16,7 @@ Rules around Jev. Every failure keeps the thread's current model and effort:
   question stuck on the thread's small model costs more)
 - below LOW_CONFIDENCE the choice moves one rung up (on a short follow-up it keeps the thread's rung instead)
 - a gateway restart forgets the thread's pinned model, so the next short follow-up is scored alone and may lower it
-Which model and effort each rung runs comes from config.yaml (plugins.entries.pm_router.settings.rungs); without a
+Which model and effort each rung runs comes from config.yaml (plugins.entries.oa_router.settings.rungs); without a
 valid ladder there, routing stays off. A rung may name another provider (e.g. openai-codex); when that one fails,
 Hermes runs the turn on the default model and tries it again next turn.
 The log keeps decisions and lengths, never message text.
@@ -54,7 +54,7 @@ WHEN = [
     ("lookup", "One simple lookup: a single Jira ticket's status, one Slack link, one fact from the team database."),
     ("reasoned",
      "A short question that needs some reasoning over one or two lookups: why a ticket is blocked, whether two facts agree."),
-    ("routine", "Routine PM work: summarize one thread or one day, draft a short ticket or message, a few tool calls."),
+    ("routine", "Routine work: summarize one thread or one day, draft a short ticket or message, a few tool calls."),
     ("multi_step", "Multi-step work across Jira, GitHub, Notion and Slack: weekly reports, comparisons, careful drafting."),
     ("deep", "Hard reasoning: sprint planning, root-cause analysis over many threads, writing for leadership or clients."),
     ("hardest", "Ambiguous or high-stakes: conflicting sources, decisions with real consequences, long careful analysis."),
@@ -107,7 +107,7 @@ _gateway = None  # the GatewayRunner, kept from on_dispatch so the reply footer 
 _background: set = set()  # strong refs: the loop holds tasks weakly, an unreferenced shadow task can vanish
 # Own pool: urlopen's timeout does not bound DNS lookup, and a hung lookup must not starve the loop's default executor.
 # ponytail: 4 concurrent Jev calls; extra calls queue, hit the wait_for timeout and fail open.
-_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="pm_router")
+_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="oa_router")
 
 
 # Every rung, always: a floor in the options hid the cheap rungs Jev needs to say a request got easier.
@@ -187,16 +187,16 @@ def ask_jev(text: str, context: str, timeout: float) -> dict | None:
                 "jev_ms": int((time.monotonic() - start) * 1000),
                 "jev_tokens": (out.get("usage") or {}).get("input_tokens")}
     except (OSError, http.client.HTTPException, ValueError, KeyError, TypeError) as e:  # URLError, HTTPError, timeouts: OSError
-        logger.info("pm_router: Jev unavailable (%s), keeping current settings", e)
+        logger.info("oa_router: Jev unavailable (%s), keeping current settings", e)
         return None
 
 
 def _log_path() -> Path:
     try:
         from hermes_constants import get_hermes_home
-        return get_hermes_home() / "logs" / "pm_router.jsonl"
+        return get_hermes_home() / "logs" / "oa_router.jsonl"
     except ImportError:
-        return Path(os.environ.get("HERMES_HOME", "/opt/data")) / "logs" / "pm_router.jsonl"
+        return Path(os.environ.get("HERMES_HOME", "/opt/data")) / "logs" / "oa_router.jsonl"
 
 
 def _write(entry: dict) -> None:
@@ -207,7 +207,7 @@ def _write(entry: dict) -> None:
             f.write(json.dumps({"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), **entry},
                                ensure_ascii=False) + "\n")
     except OSError as e:
-        logger.debug("pm_router: log write failed: %s", e)
+        logger.debug("oa_router: log write failed: %s", e)
 
 
 def _peek(session_store, key: str) -> str | None:
@@ -263,11 +263,11 @@ async def _shadow(work) -> None:
     try:
         await work
     except Exception as e:  # nobody awaits this task: fail open and log, like on_dispatch
-        logger.warning("pm_router: not routed (%s)", e)
+        logger.warning("oa_router: not routed (%s)", e)
 
 
 async def _status(gateway, event, text: str | None) -> None:
-    """Slack's live status line ("PM-Agent <text>"); None restores Hermes' default. Never fails routing.
+    """Slack's live status line ("Open-Agent <text>"); None restores Hermes' default. Never fails routing.
     ponytail: Hermes keys it by chat_id, so two threads of one DM share the line (upstream)."""
     try:
         adapter = getattr(gateway, "adapters", {}).get(event.source.platform)
@@ -279,7 +279,7 @@ async def _status(gateway, event, text: str | None) -> None:
             await asyncio.wait_for(adapter.send_typing(
                 event.source.chat_id, metadata=_thread_metadata_for_event(event)), 1.5)
     except Exception as e:
-        logger.debug("pm_router: no status (%s)", e)
+        logger.debug("oa_router: no status (%s)", e)
 
 
 async def _route(event, gateway, session_store) -> None:
@@ -343,7 +343,7 @@ async def on_dispatch(event=None, gateway=None, session_store=None, **_):
     try:
         await _route(event, gateway, session_store)
     except Exception as e:  # a broken router must never block a message
-        logger.warning("pm_router: not routed (%s)", e)
+        logger.warning("oa_router: not routed (%s)", e)
     return None
 
 
@@ -373,7 +373,7 @@ def _effort(cfg: dict | None) -> str:
 
 def on_llm_output(response_text=None, model=None, platform=None, **_) -> None:
     """Grey line under the Slack reply: what Jev picked for the thread and what actually ran (they differ in shadow
-    mode, after a user's /model or /reasoning, and on a fallback). Left on the Slack adapter for pm_slack to
+    mode, after a user's /model or /reasoning, and on a fallback). Left on the Slack adapter for oa_slack to
     add as a context block, so the reply text (and what the model sees next turn) stays clean.
     ponytail: in shadow mode Jev decides in the background, so a reply faster than Jev shows the previous message's pick."""
     try:
@@ -386,11 +386,11 @@ def on_llm_output(response_text=None, model=None, platform=None, **_) -> None:
         ran = _effort(_gateway._resolve_session_reasoning_config(session_key=key, model=model or "")) if key else "?"
         slack = next(a for p, a in _gateway.adapters.items() if getattr(p, "value", p) == "slack")
         if chat:
-            # ponytail: keyed by channel; pm_slack takes it on that channel's next post (this reply). Two turns
+            # ponytail: keyed by channel; oa_slack takes it on that channel's next post (this reply). Two turns
             # finishing in one channel at the same instant could swap lines.
-            slack.__dict__.setdefault("pm_route_lines", {})[chat] = f"Jev picked: {picked}  ·  Ran: {model}, {ran}"
+            slack.__dict__.setdefault("oa_route_lines", {})[chat] = f"Jev picked: {picked}  ·  Ran: {model}, {ran}"
     except Exception as e:  # a broken footer must never break a reply
-        logger.debug("pm_router: no footer (%s)", e)
+        logger.debug("oa_router: no footer (%s)", e)
     return None
 
 
@@ -402,7 +402,7 @@ def on_llm_call(platform=None, **_) -> dict | None:
         last = _threads.get(_session_key()) if platform == "slack" and _settings["mode"] == "apply" else None
         return {"context": PLAN} if last and last.get("plan") else None
     except Exception as e:  # a broken hook must never break a turn
-        logger.debug("pm_router: no plan (%s)", e)
+        logger.debug("oa_router: no plan (%s)", e)
         return None
 
 
@@ -416,7 +416,7 @@ def _fallback_on_first_empty() -> None:
     except Exception:
         return
     original = guard.empty_retry_budget
-    if getattr(original, "_pm_router", False):
+    if getattr(original, "_oa_router", False):
         return
 
     def empty_retry_budget(agent, response):
@@ -424,7 +424,7 @@ def _fallback_on_first_empty() -> None:
             return 0
         return original(agent, response)
 
-    empty_retry_budget._pm_router = True
+    empty_retry_budget._oa_router = True
     guard.empty_retry_budget = empty_retry_budget
 
 
@@ -439,14 +439,14 @@ def _short_fallback_notice() -> None:
     except Exception:
         return
     original = helpers._buffer_fallback_notice
-    if getattr(original, "_pm_router", False):
+    if getattr(original, "_oa_router", False):
         return
 
     def _buffer_fallback_notice(agent, notice):
         m = _FALLBACK_NOTICE.match(notice or "")
         return original(agent, f"⚠️ {m[1]} failed → using {m[2]}" if m else notice)
 
-    _buffer_fallback_notice._pm_router = True
+    _buffer_fallback_notice._oa_router = True
     helpers._buffer_fallback_notice = _buffer_fallback_notice
 
 
@@ -455,7 +455,7 @@ def register(ctx) -> None:
     _short_fallback_notice()
     mode =str(ctx.get_config("mode", "shadow") or "shadow").strip().lower()
     if mode not in ("shadow", "apply"):
-        logger.warning("pm_router: unknown mode %r, using shadow", mode)
+        logger.warning("oa_router: unknown mode %r, using shadow", mode)
         mode = "shadow"
     _settings["mode"] = mode
     try:
@@ -463,18 +463,18 @@ def register(ctx) -> None:
     except (TypeError, ValueError):
         timeout = 0.0
     if not 0.0 < timeout < float("inf"):
-        logger.warning("pm_router: timeout_s must be a positive number, using 2.0")
+        logger.warning("oa_router: timeout_s must be a positive number, using 2.0")
         timeout = 2.0
     _settings["timeout_s"] = timeout
     if not os.environ.get("TYPESAFE_API_KEY"):
-        logger.warning("pm_router: TYPESAFE_API_KEY not set, routing off")
+        logger.warning("oa_router: TYPESAFE_API_KEY not set, routing off")
         return
     if not set_rungs(ctx.get_config("rungs")):
-        logger.warning("pm_router: settings.rungs needs %s, each with a model and an effort; routing off",
+        logger.warning("oa_router: settings.rungs needs %s, each with a model and an effort; routing off",
                        ", ".join(name for name, _ in WHEN))
         return
     ctx.register_hook("pre_gateway_dispatch", on_dispatch)
     ctx.register_hook("on_session_end", on_session_end)
-    if ctx.get_config("footer", False) is True:  # grey "Jev picked · Ran" line under Slack replies (pm_slack adds it)
+    if ctx.get_config("footer", False) is True:  # grey "Jev picked · Ran" line under Slack replies (oa_slack adds it)
         ctx.register_hook("transform_llm_output", on_llm_output)
     ctx.register_hook("pre_llm_call", on_llm_call)

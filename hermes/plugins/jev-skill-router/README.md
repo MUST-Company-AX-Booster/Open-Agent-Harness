@@ -29,7 +29,7 @@ Request 1 ranks the whole roster with one Choice plus three gate booleans
 re-reads the top three with each candidate's SKILL.md excerpt plus one
 absolute `fits` judgment per candidate. Two thresholds: the winner must pass
 `fits`, and every other candidate that also passes it comes back too, best fit
-first (pm-agent patch; upstream returns the winner only). The model stays in charge: the line says to ignore it when it
+first (open-agent patch; upstream returns the winner only). The model stays in charge: the line says to ignore it when it
 does not fit.
 
 Rosters above the API's 255-choice cap are chunked (240 per chunk, each with

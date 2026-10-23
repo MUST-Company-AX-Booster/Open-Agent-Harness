@@ -25,6 +25,16 @@ proposals and decisions. Longer reports can be attached as Markdown or ZIP files
 Run it with Docker Compose. Add credentials to [`.env`](.env.example) and describe your project in
 [`hermes/SOUL.md`](hermes/SOUL.md).
 
+## Intro video
+
+<div align="center">
+
+<video src="docs/readme-intro.mp4" width="640" height="360" controls preload="metadata"></video>
+
+<p><a href="docs/readme-intro.mp4">Watch the 26-second video</a></p>
+
+</div>
+
 ## Meet Open Agent
 
 Six mascots represent the assistant's roles. They are branding concepts, not separate agents.
@@ -62,10 +72,30 @@ connected services. See [Security](#security) for access and data-handling limit
 
 ## Quick start
 
+Install the setup skill into your coding agent (Claude Code, Codex, Cursor, Gemini CLI and
+[others](https://github.com/vercel-labs/skills)):
+
+```bash
+npx skills add MUST-Company-AX-Booster/Open-Agent-Harness --skill open-agent-setup
+```
+
+Then ask your agent:
+
+```text
+Set up Open Agent for my team.
+```
+
+The agent clones this repository, fills in `.env`, describes your team in `hermes/SOUL.md`, configures the
+integrations you pick, and starts the stack. It stops and tells you when a step needs your browser or phone,
+such as creating the Slack app. No Node.js? Point your agent at
+[`skills/open-agent-setup/SKILL.md`](skills/open-agent-setup/SKILL.md) and tell it to follow the file.
+
+### Manual setup
+
 You need Git, Docker with the Compose plugin, permission to install a Slack app, and an API key for a
 model that supports tool calling.
 
-### 1. Clone and configure
+#### 1. Clone and configure
 
 ```bash
 git clone --recurse-submodules https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness.git
@@ -89,12 +119,7 @@ and internal terms. Include your GitHub organization and Notion start page if yo
 Jira is optional, but its service is included in the default stack. Configure it or follow the
 [removal steps](#jira) before starting without Jira.
 
-> [!TIP]
-> **Using Claude Code?** After cloning, open the repository and run `/onboard-agent`. The
-> [bundled onboarding skill](.claude/skills/onboard-agent/SKILL.md) walks through credentials, team
-> instructions, integrations, and deployment. Continue below for manual setup.
-
-### 2. Start the services
+#### 2. Start the services
 
 Create the bind-mount paths, then start the stack:
 
@@ -108,18 +133,18 @@ docker compose ps
 Docker Desktop needs the host file to exist before mounting it. The agent uses the committed
 [`hermes/config.yaml`](hermes/config.yaml); `data/hermes/config.yaml` is the mount target.
 
-### 3. Ask your first question
+#### 3. Ask your first question
 
-Invite your bot to a Slack channel with `/invite @PM-Agent`, then mention it:
+Invite your bot to a Slack channel with `/invite @Open-Agent`, then mention it:
 
 ```text
-@PM-Agent What has this channel discussed recently? Include your sources.
+@Open-Agent What has this channel discussed recently? Include your sources.
 ```
 
-Replace `PM-Agent` with your bot's name. Slack collection runs every five minutes, so recent messages may
+Replace `Open-Agent` with your bot's name. Slack collection runs every five minutes, so recent messages may
 not be available yet. Check startup errors with `docker compose logs -f hermes collector`.
 
-### 4. Enable nightly summaries
+#### 4. Enable nightly summaries
 
 Schedule a summary at **01:00 in `TEAM_TIMEZONE`**:
 
@@ -130,23 +155,22 @@ docker compose exec hermes hermes cron create "0 1 * * *" "$(cat hermes/cron/nig
 
 ## Architecture
 
-![Architecture of the original deployment: team sources, Hermes, and the history database](docs/architecture.png)
+![Architecture: team sources, Hermes, and the history database](docs/architecture.png)
 
-The diagram uses NeuralWatt from the original deployment. Set your own OpenAI-compatible endpoint in
-`.env`. Local services are defined in [`docker-compose.yml`](docker-compose.yml).
+The model box is an example; set your own OpenAI-compatible endpoint in `.env`. Local services are defined in [`docker-compose.yml`](docker-compose.yml).
 
 | Component | Role |
 |---|---|
 | **Hermes** (`hermes`) | Slack gateway, agent runtime, scheduled jobs, and optional web dashboard. |
 | **Message collector** (`collector`) | Polls Slack and listens for Telegram messages, then stores history in PostgreSQL. |
 | **PostgreSQL + PGroonga** (`postgres`) | Message and summary storage, with full-text search for English, Korean, Japanese, and Chinese. |
-| **History connector** (`pgmcp`) | Postgres MCP server using a database role that reads history and writes only to `summaries`. |
-| **Jira connector** (`jira-mcp`) | MCP server with an allowlist for reading, creating, updating, and commenting on issues. |
-| **GitHub and Notion** | Optional hosted MCP connections. GitHub is read-only; Notion also supports the optional request-list workflow. |
+| **History connector** (`teamdb`) | Postgres connector using a database role that reads history and writes only to `summaries`. |
+| **Jira connector** (`jira`) | Connector with an allowlist for reading, creating, updating, and commenting on issues. |
+| **GitHub and Notion** | Optional hosted connectors. GitHub is read-only; Notion also supports the optional request-list workflow. |
 | **Jev router** | Optional model and skill selection through TypeSafe. |
 
 The collector stores Slack and Telegram history in PostgreSQL. The agent reads summaries first, then
-searches messages for detail. It queries Jira, GitHub, and Notion through MCP connectors as needed.
+searches messages for detail. It queries Jira, GitHub, and Notion through connectors as needed.
 
 ## Configuration
 
@@ -190,7 +214,7 @@ Hermes connects over Socket Mode, so the server needs no public URL.
    have real tokens set `SLACK_BOT_TOKEN=pending` and `SLACK_APP_TOKEN=pending`. This does not start the bot:
    ```bash
    docker compose run --rm --no-deps --entrypoint /opt/hermes/.venv/bin/hermes hermes \
-     slack manifest --name PM-Agent --agent-view
+     slack manifest --name Open-Agent --agent-view
    ```
 2. At api.slack.com/apps choose **Create New App → From an app manifest** and paste it.
 3. Add the bot scope `channels:join`, so the bot can read a link from a public channel it hasn't joined, and the
@@ -231,7 +255,7 @@ id.atlassian.com/manage-profile/security/api-tokens) and `JIRA_PROJECT`. The age
 only that project. The bundled instructions require confirmation before creating or changing an issue. The connector excludes
 delete, move, and transition tools (see `ENABLED_TOOLS` in `docker-compose.yml`).
 
-If you don't use Jira, remove the `jira-mcp` service and its entry in `hermes`' `depends_on` from
+If you don't use Jira, remove the `jira` service and its entry in `hermes`' `depends_on` from
 `docker-compose.yml`, and the `jira:` block under `mcp_servers` in `hermes/config.yaml`.
 
 </details>
@@ -290,12 +314,12 @@ docker compose exec hermes hermes cron create "0 9,23 * * *" "$(cat hermes/cron/
 
 Both Jev plugins are disabled until you set `TYPESAFE_API_KEY`.
 
-- **`pm_router`** chooses a model and reasoning effort for each Slack message. Uncomment the seven rungs under `plugins.entries.pm_router.settings.rungs`
+- **`oa_router`** chooses a model and reasoning effort for each Slack message. Uncomment the seven rungs under `plugins.entries.oa_router.settings.rungs`
   in `hermes/config.yaml` and fill in models your provider offers. Routing stays off until all seven are valid.
-  With `mode: shadow` it only logs its choices to `data/hermes/logs/pm_router.jsonl`.
+  With `mode: shadow` it only logs its choices to `data/hermes/logs/oa_router.jsonl`.
 - **`jev-skill-router`** tells the agent which skills fit the message.
 
-Both send the message text to TypeSafe, and `pm_router` also sends up to 2,000 characters of the thread.
+Both send the message text to TypeSafe, and `oa_router` also sends up to 2,000 characters of the thread.
 
 </details>
 
@@ -314,9 +338,9 @@ machine, use a reverse proxy with HTTPS, such as Caddy.
 |---|---|
 | `hermes/SOUL.md` | The agent's instructions: your project, people and terms, answer format, safety rules. |
 | `hermes/skills/team-history/SKILL.md` | How it searches history. Add synonyms in your team's languages. |
-| `hermes/config.yaml` | Model, tools per platform, MCP servers and plugins. |
+| `hermes/config.yaml` | Model, tools per platform, connectors and plugins. |
 | `hermes/cron/*.md` | Prompts for scheduled jobs. |
-| `hermes/plugins/` | `pm_slack` (live Slack reads, status line, Stop button), `pm_export` (file answers), `pm_router`, `jev-skill-router`. |
+| `hermes/plugins/` | `oa_slack` (live Slack reads, status line, Stop button), `oa_export` (file answers), `oa_router`, `jev-skill-router`. |
 
 After editing these files, run `docker compose restart hermes`; `docker compose up -d` does not reload them. After
 changing `.env`, run `docker compose up -d` instead; `restart` keeps the old values.
@@ -334,7 +358,7 @@ changing `.env`, run `docker compose up -d` instead; `restart` keeps the old val
 - Shared collected history is available through the team database. Slack user restrictions control who can
   use the bot; do not assume per-user source permissions are enforced on stored messages. Connect only sources
   appropriate for the users you allow.
-- Relevant source content goes to your model provider. Hosted MCP services handle connector requests; optional
+- Relevant source content goes to your model provider. Hosted connector services handle those requests; optional
   Jev routing also sends message text to TypeSafe (see [Jev router](#jev-router)).
 - `.env` and `data/` are git-ignored. Never commit them.
 
@@ -344,14 +368,14 @@ changing `.env`, run `docker compose up -d` instead; `restart` keeps the old val
 |---|---|
 | Follow logs | `docker compose logs -f hermes` (or `collector`) |
 | List or run scheduled jobs | `docker compose exec hermes hermes cron list` / `cron run <id>` |
-| Open a read-only database shell | `docker compose exec postgres psql -U hermes -d pm` |
+| Open a read-only database shell | `docker compose exec postgres psql -U hermes -d openagent` |
 | Check database permissions | `./db/check_permissions.sh` |
 | Run eval questions | `python3 evals/run.py` (add your own to `evals/cases.yaml`) |
 
 **Backup**
 
 ```bash
-docker compose exec -T postgres pg_dump -U postgres pm | gzip > backup-$(date +%F).sql.gz
+docker compose exec -T postgres pg_dump -U postgres openagent | gzip > backup-$(date +%F).sql.gz
 tar czf hermes-home-$(date +%F).tgz data/hermes      # scheduled jobs, sessions, logins
 ```
 
@@ -360,6 +384,17 @@ may use the Slack app and the Telegram session. Copy `.env` and `data/hermes`, b
 depends on the CPU architecture. Start `postgres` on the new machine, load the dump, then run
 `docker compose up -d --build`. On Linux, run `sudo chown -R 10000:10000 data/hermes` first, because Hermes runs
 as UID 10000.
+
+**Upgrading from pm-hermes.** Older versions used the compose project `pm-hermes` and the database `pm`.
+Run this once after pulling, before any other `docker compose` command, or a second stack starts on the same
+data and Slack app:
+
+```bash
+docker compose -p pm-hermes down
+docker compose up -d postgres
+docker compose exec postgres psql -U postgres -d postgres -c 'ALTER DATABASE pm RENAME TO openagent'
+docker compose up -d --build
+```
 
 **Updating Hermes**
 
@@ -374,7 +409,7 @@ The plugins patch a few Hermes internals, so run the plugin tests after every up
 
 ```bash
 docker compose run --rm --no-deps collector pytest -q
-cd hermes/plugins && for t in test_pm_*.py; do python3 -m unittest -q "$t"; done && cd ../..
+cd hermes/plugins && for t in test_oa_*.py; do python3 -m unittest -q "$t"; done && cd ../..
 python3 hermes/plugins/jev-skill-router/tests/test_offline.py
 ```
 
@@ -387,7 +422,7 @@ python3 hermes/plugins/jev-skill-router/tests/test_offline.py
 | [`hermes/`](hermes/) | Team instructions, runtime configuration, plugins, skills, and cron prompts. |
 | [`hermes-agent/`](hermes-agent/) | Upstream Hermes runtime, pinned as a Git submodule. |
 | [`evals/`](evals/) | Questions for checking answer quality against your connected sources. |
-| [`.claude/skills/onboard-agent/`](.claude/skills/onboard-agent/) | Guided setup and deployment workflow for Claude Code. |
+| [`skills/open-agent-setup/`](skills/open-agent-setup/) | Setup skill for any coding agent (`npx skills add`). |
 
 ## Contributing
 

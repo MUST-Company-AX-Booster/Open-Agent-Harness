@@ -8,7 +8,7 @@ and are read only for someone who is a member of that private channel themselves
 register() also fixes the Slack working-status line, see _use_text_status(), gives it plain per-step words,
 see _friendly_status(), shows the todo list's current step while one is open, see _todo_phrase(), and patches
 the Slack adapter (Stop button -> /stop, todo step, quiet status refresh, @channel guard for markdown blocks,
-pm_router's route footer, delegate_task inside the turn), see _patch_slack(). Large questions also get a checklist
+oa_router's route footer, delegate_task inside the turn), see _patch_slack(). Large questions also get a checklist
 message in the thread, updated as the todo list changes and folded behind a "Show steps" button when the turn
 ends (_show_checklist); smaller ones list the sources read (_track_step). While delegate_task helpers run, the plan
 card shows their progress (_research_step). Em dashes become commas on the way to Slack (_no_em_dashes). A reply
@@ -45,7 +45,7 @@ LINK = re.compile(r"<(https?://[^|>]+)(?:\|([^>]*))?>")
 CHANNEL_REF = re.compile(r"<#([A-Z0-9]+)(?:\|([^>]*))?>")
 
 INVITE = ("Reply with only this, in the user's language: \"I'm not in #{name}, so I can't read that message. "
-          "Please run `/invite @PM-Agent` in that channel and ask again in about 5 minutes.\"")
+          "Please run `/invite @Open-Agent` in that channel and ask again in about 5 minutes.\"")
 
 _user_names: dict[str, str] = {}
 
@@ -217,7 +217,7 @@ def _use_text_status() -> None:
             module._AGENT_SESSIONS_SUPPORTED = False
 
 
-STATUS_PHRASES = (  # tool-name prefix -> status line ("PM-Agent <phrase>")
+STATUS_PHRASES = (  # tool-name prefix -> status line ("Open-Agent <phrase>")
     ("mcp__notion__", "is reading Notion…"), ("slack_", "is reading Slack…"),
     ("mcp__jira__", "is checking Jira…"), ("mcp__github__", "is checking GitHub…"),
     ("mcp__teamdb__", "is checking team history…"), ("tool_search", "is finding the right tool…"),
@@ -250,7 +250,7 @@ def _friendly_status() -> None:
     except Exception:
         return
     original = display.build_status_phrase
-    if getattr(original, "_pm_slack", False):
+    if getattr(original, "_oa_slack", False):
         return
 
     def build_status_phrase(tool_name, args, max_len=49):
@@ -258,7 +258,7 @@ def _friendly_status() -> None:
         phrase = _status_phrase(name, None) or original(name, None, max_len)  # no previews: thread sees it
         return None if phrase and phrase.startswith("is using ") else phrase  # raw tool name: say "is thinking..."
 
-    build_status_phrase._pm_slack = True
+    build_status_phrase._oa_slack = True
     display.build_status_phrase = build_status_phrase
 
 
@@ -274,9 +274,9 @@ def _no_reasoning_as_reply() -> None:
         import agent.conversation_loop as loop
         original = loop.finish_text_response
     except Exception as e:
-        logger.warning("[pm_slack] reasoning-only guard NOT applied: %s", e)
+        logger.warning("[oa_slack] reasoning-only guard NOT applied: %s", e)
         return
-    if getattr(original, "_pm_slack", False):
+    if getattr(original, "_oa_slack", False):
         return
 
     @functools.wraps(original)  # _run_phase reads the signature and __name__
@@ -297,9 +297,9 @@ def _no_reasoning_as_reply() -> None:
         finally:
             agent.__dict__.pop("_extract_reasoning", None)
 
-    finish_text_response._pm_slack = True
+    finish_text_response._oa_slack = True
     loop.finish_text_response = finish_text_response
-    logger.info("[pm_slack] reasoning-only guard applied")
+    logger.info("[oa_slack] reasoning-only guard applied")
 
 
 BROADCAST = re.compile(r"<!(everyone|channel|here)(?:\|[^>\n]*)?>|(?<![\w@])@(everyone|channel|here)\b", re.I)
@@ -309,13 +309,13 @@ def _wrap_markdown_block(cls) -> None:
     """slack: markdown_blocks sends the raw answer, skipping format_message's @channel escape. Answers quote
     Slack and Notion text, so break broadcast mentions there too (zero-width space after the @)."""
     original = getattr(cls, "_markdown_block_payload", None)
-    if original is None or getattr(original, "_pm_slack", False):
+    if original is None or getattr(original, "_oa_slack", False):
         return
 
     def _markdown_block_payload(self, content):
         return original(self, BROADCAST.sub(lambda m: "@\u200b" + (m.group(1) or m.group(2)), content or ""))
 
-    _markdown_block_payload._pm_slack = True
+    _markdown_block_payload._oa_slack = True
     cls._markdown_block_payload = _markdown_block_payload
 
 
@@ -325,35 +325,35 @@ EM_DASH = re.compile(r"\s*—\s*")
 def _no_em_dashes(cls) -> None:
     """The model keeps writing em dashes although SOUL.md bans them; swap them for commas on the way to Slack."""
     original = getattr(cls, "send", None)
-    if original is None or getattr(original, "_pm_slack", False):
+    if original is None or getattr(original, "_oa_slack", False):
         return
 
     async def send(self, chat_id, content, *a, **kw):
         return await original(self, chat_id, EM_DASH.sub(", ", content) if isinstance(content, str) else content, *a, **kw)
 
-    send._pm_slack = True
+    send._oa_slack = True
     cls.send = send
 
 
 def _route_footer(cls) -> None:
-    """Grey "Jev picked · Ran" context block under the reply; pm_router leaves the line in adapter.pm_route_lines.
+    """Grey "Jev picked · Ran" context block under the reply; oa_router leaves the line in adapter.oa_route_lines.
 
     Only when the reply goes out with blocks (markdown_blocks); a plain-text reply drops the line. Taken by the
-    channel's next chat.postMessage, which is the reply: pm_router sets it as the turn finishes.
+    channel's next chat.postMessage, which is the reply: oa_router sets it as the turn finishes.
     """
     original = getattr(cls, "_call_with_block_fallback", None)
-    if original is None or getattr(original, "_pm_slack", False):
+    if original is None or getattr(original, "_oa_slack", False):
         return
 
     async def _call_with_block_fallback(self, client_fn, method, kwargs, verb):
-        lines = self.__dict__.get("pm_route_lines") or {}
+        lines = self.__dict__.get("oa_route_lines") or {}
         line = lines.pop(str(kwargs.get("channel")), None) if method == "chat_postMessage" else None
         blocks = kwargs.get("blocks")
         if line and blocks and len(blocks) < 50:
             kwargs = {**kwargs, "blocks": [*blocks, {"type": "context", "elements": [{"type": "plain_text", "text": line}]}]}
         return await original(self, client_fn, method, kwargs, verb)
 
-    _call_with_block_fallback._pm_slack = True
+    _call_with_block_fallback._oa_slack = True
     cls._call_with_block_fallback = _call_with_block_fallback
 
 
@@ -375,12 +375,12 @@ async def _on_stop(adapter, event: dict, body: dict) -> None:
         await adapter._get_client(channel, team_id or None).api_call(
             "agents.sessions.setStatus", json={"channel_id": channel, "thread_ts": thread_ts, "status": "active"})
     except Exception as e:
-        logger.debug("[pm_slack] agents.sessions.setStatus active failed: %s", e)
+        logger.debug("[oa_slack] agents.sessions.setStatus active failed: %s", e)
 
 
 def _wrap_bolt_handlers(cls) -> None:
     original = cls._register_bolt_handlers
-    if getattr(original, "_pm_slack_stop", False):
+    if getattr(original, "_oa_slack_stop", False):
         return
 
     def _register_bolt_handlers(self) -> None:
@@ -392,7 +392,7 @@ def _wrap_bolt_handlers(cls) -> None:
         self._app.action(STEPS_HIDE)(_toggle_steps)
         original(self)
 
-    _register_bolt_handlers._pm_slack_stop = True
+    _register_bolt_handlers._oa_slack_stop = True
     cls._register_bolt_handlers = _register_bolt_handlers
 
 
@@ -437,7 +437,7 @@ CHECK_MARKS = {"completed": "✓", "in_progress": "✱"}  # anything else (pendi
 _checklists: dict[tuple[str, str], dict] = {}  # (chat, thread) -> {"ts", "text"} of this turn's checklist
 # One worker keeps each thread's post -> edits in order and keeps Slack calls off the agent thread.
 # ponytail: one worker for all threads; a slow Slack call delays other threads' checklists, not their answers.
-_slack_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="pm_slack")
+_slack_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="oa_slack")
 
 
 def _heading(title: str, items: list[tuple[str, str]]) -> str:
@@ -486,7 +486,7 @@ def _track_step(tool_name, args, status: str) -> None:
         items = [(st, label) for label, st in list(steps.items())]
         _slack_pool.submit(_show_checklist, *key, _render("Steps", items))
     except Exception as e:
-        logger.debug("[pm_slack] step checklist failed: %s", e)
+        logger.debug("[oa_slack] step checklist failed: %s", e)
 
 
 def _label(phrase: str) -> str:
@@ -532,7 +532,7 @@ def _research_step(started: int = 0, done: int = 0, now: str | None = None, all_
             r["at"] = time.monotonic()
         _slack_pool.submit(_update_plan, key)
     except Exception as e:
-        logger.debug("[pm_slack] research progress failed: %s", e)
+        logger.debug("[oa_slack] research progress failed: %s", e)
 
 
 def _update_plan(key: tuple[str, str]) -> None:
@@ -566,7 +566,7 @@ def _thread() -> str:
         return ""
 
 
-STEPS_SHOW, STEPS_HIDE = "pm_steps_show", "pm_steps_hide"
+STEPS_SHOW, STEPS_HIDE = "oa_steps_show", "oa_steps_hide"
 
 
 def _blocks(text: str, expanded: bool | None) -> str:
@@ -594,7 +594,7 @@ def _show_checklist(chat: str, thread: str, text: str) -> None:
     if body.get("ok"):
         _checklists[(chat, thread)] = {"ts": body["ts"], "text": text}
     else:
-        logger.debug("[pm_slack] checklist post failed: %s", body.get("error"))
+        logger.debug("[oa_slack] checklist post failed: %s", body.get("error"))
 
 
 def _finish_checklist(key: tuple[str, str]) -> None:
@@ -620,7 +620,7 @@ def _clear_step(chat: str) -> None:
         for adapter in list(_adapters):
             adapter.set_status_text(chat, None)
     except Exception as e:
-        logger.debug("[pm_slack] clear step failed: %s", e)
+        logger.debug("[oa_slack] clear step failed: %s", e)
 
 
 def on_tool_done(tool_name=None, args=None, result=None, **_) -> None:
@@ -648,7 +648,7 @@ def on_tool_done(tool_name=None, args=None, result=None, **_) -> None:
                 _plans[key] = items  # the plan takes over the card the steps were in
             _slack_pool.submit(_show_checklist, *key, _plan_text(key))
     except Exception as e:
-        logger.debug("[pm_slack] todo status failed: %s", e)
+        logger.debug("[oa_slack] todo status failed: %s", e)
 
 
 def on_turn_end(platform=None, **_) -> None:
@@ -681,7 +681,7 @@ async def on_dispatch(event=None, gateway=None, **_) -> None:
 
 def _wrap_status_text(cls) -> None:
     original = getattr(cls, "set_status_text", None)
-    if original is None or getattr(original, "_pm_slack_todo", False):
+    if original is None or getattr(original, "_oa_slack_todo", False):
         return
 
     def set_status_text(self, chat_id, text):
@@ -689,7 +689,7 @@ def _wrap_status_text(cls) -> None:
         # Deliberate: an open todo step wins over every other phrase (step names already say the source).
         original(self, chat_id, _todo_status.get(str(chat_id)) or text)
 
-    set_status_text._pm_slack_todo = True
+    set_status_text._oa_slack_todo = True
     cls.set_status_text = set_status_text
 
 
@@ -703,7 +703,7 @@ def _quiet_status(cls) -> None:
     # ponytail: patches Hermes internals; one jump per status change (live_status off: one per turn). Slack clears
     # an unrefreshed status after 2 min; the step card carries progress after that.
     original = getattr(cls, "_set_thread_status", None)
-    if original is None or getattr(original, "_pm_slack_quiet", False):
+    if original is None or getattr(original, "_oa_slack_quiet", False):
         return
     last: dict[tuple, str] = {}  # (chat, thread) -> text shown; dropped on clear
 
@@ -717,7 +717,7 @@ def _quiet_status(cls) -> None:
             last.pop(key, None)
         await original(self, chat_id, team_id, thread_ts, status, fail_label)
 
-    _set_thread_status._pm_slack_quiet = True
+    _set_thread_status._oa_slack_quiet = True
     cls._set_thread_status = _set_thread_status
     # Upstream's fallback ticks "still working… (1m05s)" every second, so no two ticks match: keep it fixed.
     cls._default_status_text = staticmethod(lambda started: "is thinking...")
@@ -740,7 +740,7 @@ def _patch_slack(cls) -> None:
 
 
 def _enable_stop_button() -> None:
-    """Make Slack's Stop button (next to "PM-Agent is working") stop the run; also applies the rest of _patch_slack().
+    """Make Slack's Stop button (next to "Open-Agent is working") stop the run; also applies the rest of _patch_slack().
 
     Slack offers Stop only to apps subscribed to the agent_session_stopped event, and Hermes has no listener
     for it (upstream issue NousResearch/hermes-agent#90978). The Slack adapter is imported lazily, after
@@ -752,12 +752,12 @@ def _enable_stop_button() -> None:
     except Exception:
         return
     parent_hook = BasePlatformAdapter.__dict__.get("__init_subclass__")
-    if not getattr(getattr(parent_hook, "__func__", None), "_pm_slack_stop", False):
+    if not getattr(getattr(parent_hook, "__func__", None), "_oa_slack_stop", False):
         def __init_subclass__(cls, **kw):
             super(BasePlatformAdapter, cls).__init_subclass__(**kw)
             if cls.__name__ == "SlackAdapter" and hasattr(cls, "_register_bolt_handlers"):
                 _patch_slack(cls)
-        __init_subclass__._pm_slack_stop = True
+        __init_subclass__._oa_slack_stop = True
         BasePlatformAdapter.__init_subclass__ = classmethod(__init_subclass__)
     for name, module in list(sys.modules.items()):
         if name.endswith("platforms__slack.adapter") and hasattr(module, "SlackAdapter"):
@@ -800,7 +800,7 @@ def register(ctx) -> None:
     ctx.register_hook("post_tool_call", on_tool_done)
     ctx.register_hook("on_session_end", on_turn_end)
     ctx.register_hook("pre_gateway_dispatch", on_dispatch)
-    ctx.register_tool(name="slack_read_link", toolset="pm_slack", schema=SLACK_READ_LINK_SCHEMA,
+    ctx.register_tool(name="slack_read_link", toolset="oa_slack", schema=SLACK_READ_LINK_SCHEMA,
                       handler=slack_read_link, requires_env=["SLACK_BOT_TOKEN"], emoji="🔗")
-    ctx.register_tool(name="slack_recent", toolset="pm_slack", schema=SLACK_RECENT_SCHEMA,
+    ctx.register_tool(name="slack_recent", toolset="oa_slack", schema=SLACK_RECENT_SCHEMA,
                       handler=slack_recent, requires_env=["SLACK_BOT_TOKEN"], emoji="💬")

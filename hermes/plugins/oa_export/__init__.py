@@ -137,7 +137,7 @@ SAVE_ZIP_SCHEMA = {
 
 
 def register(ctx) -> None:
-    ctx.register_tool(name="save_markdown", toolset="pm_export", schema=SAVE_MARKDOWN_SCHEMA,
+    ctx.register_tool(name="save_markdown", toolset="oa_export", schema=SAVE_MARKDOWN_SCHEMA,
                       handler=save_markdown, emoji="📝")
-    ctx.register_tool(name="save_zip", toolset="pm_export", schema=SAVE_ZIP_SCHEMA,
+    ctx.register_tool(name="save_zip", toolset="oa_export", schema=SAVE_ZIP_SCHEMA,
                       handler=save_zip, emoji="🗜️")
