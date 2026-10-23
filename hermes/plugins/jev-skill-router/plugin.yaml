@@ -22,7 +22,7 @@ config_schema:
   shadow:
     type: bool
     default: false
-    description: "pm-agent patch: decide and log in the background, inject nothing"
+    description: "open-agent patch: decide and log in the background, inject nothing"
   gate:
     type: float
     default: 0.30

@@ -5,7 +5,7 @@ import sys
 import unittest
 from pathlib import Path
 
-spec = importlib.util.spec_from_file_location("pm_slack", Path(__file__).parent / "pm_slack" / "__init__.py")
+spec = importlib.util.spec_from_file_location("oa_slack", Path(__file__).parent / "oa_slack" / "__init__.py")
 ps = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ps)
 
@@ -66,7 +66,7 @@ class PmSlackTest(unittest.TestCase):
             fake = self.use(**kw)
             err = json.loads(ps.slack_read_link({"url": LINK}))["error"]
             self.assertTrue(err.startswith("not_in_channel"), err)
-            self.assertIn("/invite @PM-Agent", err)
+            self.assertIn("/invite @Open-Agent", err)
             self.assertNotIn("conversations.replies", fake.calls)
 
     def test_private_member_channel_only_for_its_members(self):
@@ -160,7 +160,7 @@ class PmSlackTest(unittest.TestCase):
                     return types.SimpleNamespace(api_call=api_call)
 
             self.assertFalse(SlackAdapter.supports_async_delivery)  # delegate_task stays in the turn
-            self.assertTrue(SlackAdapter.set_status_text._pm_slack_todo)
+            self.assertTrue(SlackAdapter.set_status_text._oa_slack_todo)
             a = SlackAdapter()
             a._register_bolt_handlers()
             kinds = [k for k, _ in a._app.listeners]
@@ -244,9 +244,9 @@ class PmSlackTest(unittest.TestCase):
         self.assertEqual(methods, ["chat.postMessage", "chat.update", "chat.update", "chat.update", "chat.update"])
         self.assertNotIn("accessory", calls[1][1])  # while working: whole list, no button
         self.assertEqual(calls[2][1]["text"]["text"], "*Steps · 1/1 done*")  # turn over: folded to its heading
-        self.assertEqual((show["action_id"], show["text"]["text"], show["value"]), ("pm_steps_show", "Show steps", text))
+        self.assertEqual((show["action_id"], show["text"]["text"], show["value"]), ("oa_steps_show", "Show steps", text))
         self.assertEqual(calls[3][1]["text"]["text"], text)  # Show steps: whole list again, with Hide
-        self.assertEqual(calls[3][1]["accessory"]["action_id"], "pm_steps_hide")
+        self.assertEqual(calls[3][1]["accessory"]["action_id"], "oa_steps_hide")
         self.assertEqual(calls[4][1]["text"]["text"], "*Steps · 1/1 done*")  # Hide steps: folded
         self.assertNotIn(("C1", "1.2"), ps._checklists)
 
@@ -295,7 +295,7 @@ class PmSlackTest(unittest.TestCase):
         ps._route_footer(SlackAdapter)
         ps._route_footer(SlackAdapter)  # plugin reload must not wrap twice
         a, md = SlackAdapter(), [{"type": "markdown", "text": "hi"}]
-        a.pm_route_lines = {"C1": "Jev picked: m, high  ·  Ran: m, high"}
+        a.oa_route_lines = {"C1": "Jev picked: m, high  ·  Ran: m, high"}
         asyncio.run(a._call_with_block_fallback(None, "chat_update", {"channel": "C1", "blocks": md}, "edit"))
         asyncio.run(a._call_with_block_fallback(None, "chat_postMessage", {"channel": "C1", "blocks": md}, "send"))
         asyncio.run(a._call_with_block_fallback(None, "chat_postMessage", {"channel": "C1", "blocks": md}, "send"))

@@ -5,7 +5,7 @@ description: Answer questions about what the team discussed, decided, or asked i
 
 # Searching team history
 
-Use the `teamdb` MCP tools (`execute_sql`) against Postgres. Messages may be in any language the team uses; PGroonga also tokenizes Korean, Japanese and Chinese.
+Use the `teamdb` tools (`execute_sql`) against Postgres. Messages may be in any language the team uses; PGroonga also tokenizes Korean, Japanese and Chinese.
 
 ## Tables
 
@@ -49,4 +49,4 @@ Tips: put a person's name in the query for "what did X say" (search_text include
 - Never write to any table except `summaries` (the database will refuse anyway).
 - In answers, cite where it came from: channel/group name, sender, date.
 - If nothing is found, say so and say what you searched for. Do not guess.
-- For Jira questions use the `jira` MCP tools. The Jira connector only sees the team's project; jira_get_all_projects names it. Before creating or changing an issue, show the user what you will do and wait for "yes".
+- For Jira questions use the `jira` tools. The Jira connector only sees the team's project; jira_get_all_projects names it. Before creating or changing an issue, show the user what you will do and wait for "yes".

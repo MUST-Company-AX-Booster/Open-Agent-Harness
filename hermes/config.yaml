@@ -1,4 +1,4 @@
-# Hermes config for the PM agent. Committed: no secrets here.
+# Hermes config for Open Agent. Committed: no secrets here.
 # Mounted over /opt/data/config.yaml. Edit this file, not via `hermes config set`.
 # ${VAR} is expanded by Hermes from the container environment (.env).
 # Any OpenAI-compatible endpoint whose model supports tool calling (see .env.example for examples).
@@ -22,34 +22,34 @@ agent:
 
 # Any workspace member can talk to the bot on Slack: no terminal/file/code tools, and no memory/session_search
 # (they expose other people's conversations). Shared history is read through teamdb only.
-# MCP servers (teamdb) are added automatically when none is listed here (tools_config._merge_mcp_servers).
+# Connectors (teamdb) are added automatically when none is listed here (tools_config._merge_mcp_servers).
 platform_toolsets:
-  slack: [web, vision, todo, clarify, skills, pm_export, pm_slack, delegation]
-  cron: [web, vision, todo, clarify, skills, pm_export]
+  slack: [web, vision, todo, clarify, skills, oa_export, oa_slack, delegation]
+  cron: [web, vision, todo, clarify, skills, oa_export]
 # Plugin toolsets are on for every platform unless listed here as "known" for it and absent from its list above.
 # A cron-only plugin tool goes in cron's list above and here under slack.
 
-# pm_export (hermes/plugins/pm_export): write-only save_markdown / save_zip for .md and .zip replies.
-# pm_slack (hermes/plugins/pm_slack): live Slack fallback, slack_read_link / slack_recent, channels only (no DMs).
+# oa_export (hermes/plugins/oa_export): write-only save_markdown / save_zip for .md and .zip replies.
+# oa_slack (hermes/plugins/oa_slack): live Slack fallback, slack_read_link / slack_recent, channels only (no DMs).
 # Also fixes Slack's status line (Hermes sent it to agents.sessions.setStatus, which rejects text) and words it per step.
-# pm_router (hermes/plugins/pm_router): TypeSafe Jev picks model + effort per message (down only when sure),
+# oa_router (hermes/plugins/oa_router): TypeSafe Jev picks model + effort per message (down only when sure),
 # from the ladder under rungs below. Fill in models your provider has.
 # jev-skill-router (vendored, MIT): Jev names the relevant skills as a hint. Both stay off without TYPESAFE_API_KEY and
-# send the message to TypeSafe (US); pm_router also sends up to 2000 chars of the thread's earlier messages. Both apply their choice; decisions log to logs/pm_router.jsonl and
-# logs/jev-skill-router.log. Back to log-only: pm_router mode: shadow, skill shadow: true.
+# send the message to TypeSafe (US); oa_router also sends up to 2000 chars of the thread's earlier messages. Both apply their choice; decisions log to logs/oa_router.jsonl and
+# logs/jev-skill-router.log. Back to log-only: oa_router mode: shadow, skill shadow: true.
 # User plugins are opt-in; this list loads only these.
 plugins:
-  enabled: [pm_export, pm_slack, pm_router, jev-skill-router]
+  enabled: [oa_export, oa_slack, oa_router, jev-skill-router]
   entries:
-    pm_router:
+    oa_router:
       settings:
         mode: apply
         timeout_s: 2.0
         footer: true          # small grey "Jev picked · Ran" line under Slack replies (not in the reply text)
         # Cheapest first. Every rung needs a model and an effort that model accepts (none, minimal, low, medium,
         # high, xhigh, max); provider is only for a model off the main endpoint. Routing stays off until all
-        # seven are filled in. Uncomment and put in your models; this example is the ladder the original
-        # deployment ran on Neuralwatt + Codex.
+        # seven are filled in. Uncomment and put in your models; this example ladder uses one
+        # OpenAI-compatible endpoint plus Codex.
         # rungs:
         #   quick:      {model: deepseek-v4.1-flash, effort: none}
         #   lookup:     {model: deepseek-v4.1-flash, effort: low}
@@ -67,8 +67,8 @@ plugins:
         shortlist: 5          # a turn can need several skills; this caps how many come back
         timeout_s: 4.0
 
-# Large questions (pm_router: Jev rung multi_step or above) get a one-turn instruction to plan with todo_list and
-# run independent research steps as parallel subagents; pm_slack shows the current step in the status line and keeps
+# Large questions (oa_router: Jev rung multi_step or above) get a one-turn instruction to plan with todo_list and
+# run independent research steps as parallel subagents; oa_slack shows the current step in the status line and keeps
 # delegate_task inside the turn (one reply, no detached results). Children use the parent's model and tools.
 delegation:
   max_concurrent_children: 3
@@ -87,21 +87,21 @@ tool_loop_guardrails:
 # Python process that doesn't see /opt/data/lazy-packages, so it would fail and fall back to this ring every time.
 # It needs ddgs baked into the image (a Dockerfile layer), which means changing the hermes-agent submodule build.
 
-# Skills stay readable (Task 5 team-history) but skill_manage never commits: with write_approval it only
+# Skills stay readable (team-history) but skill_manage never commits: with write_approval it only
 # stages JSON under /opt/data/pending/skills (hermes-agent/tools/write_approval.py). No per-tool disable exists.
 skills:
   write_approval: true
 
 mcp_servers:
   teamdb:
-    url: http://pgmcp:8000/sse
+    url: http://teamdb:8000/sse
     transport: sse
     timeout: 60
   jira:
-    url: http://jira-mcp:9000/sse
+    url: http://jira:9000/sse
     transport: sse
     timeout: 60
-  # GitHub's hosted MCP, read-only. Optional: set enabled: true and GITHUB_OAUTH_TOKEN (README, "GitHub").
+  # GitHub's hosted connector, read-only. Optional: set enabled: true and GITHUB_OAUTH_TOKEN (README, "GitHub").
   # Scope read:org read:user sees public repos; private repos need `repo`.
   # Not `auth: oauth`: Hermes' browser flow asks for every advertised scope (repo, write:packages, ...) and its
   # device flow can't parse GitHub's reply. Private repos later need `repo` + a new token.
@@ -113,7 +113,7 @@ mcp_servers:
       X-MCP-Toolsets: context,repos,pull_requests
       X-MCP-Readonly: "true"
     timeout: 60
-  # Notion's hosted MCP. Optional: set enabled: true, then `hermes mcp login notion` (README, "Notion").
+  # Notion's hosted connector. Optional: set enabled: true, then `hermes mcp login notion` (README, "Notion").
   # Sees what the logged-in account sees. Tool allowlist (original hyphenated names): read tools +
   # create-pages/update-page for the optional request list (cron job task-list). The allowlist is for Slack too;
   # SOUL.md limits writes to that one database. No delete/move/duplicate tools.
@@ -138,20 +138,20 @@ onboarding:
 slack:
   require_mention: true
   strict_mention: true
-  # Other bots are heard only when they @mention PM-Agent; plain bot posts stay dropped.
+  # Other bots are heard only when they @mention Open-Agent; plain bot posts stay dropped.
   # Loop guard is in SOUL.md (no @mention back, max 2 replies per bot per thread).
   allow_bots: mentions
   # No "Hermes is shutting down / restarting" posts on Slack. Every deploy restarts the gateway, and the
   # notice went to the home channel and any chat with a question in flight. Same flag mutes the auto-resume heads-up.
   gateway_restart_notification: false
   # Answers render as Slack's native markdown block (bullets, bold, links, tables); over 11.5k chars or if Slack
-  # rejects the block, Hermes falls back to plain mrkdwn text. pm_slack breaks @channel/@here in the block.
+  # rejects the block, Hermes falls back to plain mrkdwn text. oa_slack breaks @channel/@here in the block.
   markdown_blocks: true
 
 # Status line stays one fixed "is thinking..." per turn: every status change makes Slack open that thread for the
 # user (pulled them back from other threads). Large questions show their plan as a checklist message instead
-# (pm_slack, edited as the todo list changes).
-# Back to per-step words: "full" (friendly names from pm_slack; "full" because MCP tools' real name is in args).
+# (oa_slack, edited as the todo list changes).
+# Back to per-step words: "full" (friendly names from oa_slack; "full" because connector tools' real name is in args).
 display:
   platforms:
     slack:
@@ -159,7 +159,7 @@ display:
 
 # Off: the pinned Hermes (hermes-agent submodule) misses its Slack native-stream fixes. When a turn's final text
 # doesn't match the streamed text exactly (whitespace), it posts the answer a second time and never closes the
-# stream, so "PM-Agent is working" spins forever; streams are also keyed per channel, so two threads in one DM
+# stream, so "Open-Agent is working" spins forever; streams are also keyed per channel, so two threads in one DM
 # close each other's. Fixed upstream in 72893ca6a1e, d5a2d1f0698, d5bddd7f007, fdec926ef54 (Sep 2026).
 # Turn back on only after bumping the submodule past fdec926ef54.
 streaming:
@@ -170,7 +170,7 @@ streaming:
 dashboard:
   show_token_analytics: true
 
-# Cron output is posted as-is: no "Cronjob Response:" header or "To stop or manage this job" footer
-# (usage-report DMs management one line + PDFs). Other cron jobs deliver locally, so nothing else changes.
+# Cron output is posted as-is: no "Cronjob Response:" header or "To stop or manage this job" footer,
+# so a summary posted to Slack reads like a normal message.
 cron:
   wrap_response: false

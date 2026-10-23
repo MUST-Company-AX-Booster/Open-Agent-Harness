@@ -7,13 +7,13 @@
   question: "Write this week's team summary as a markdown file"
   must_contain: [["MEDIA:/opt/data/cache/documents/exports/"], [".md"]]
   must_not_contain: []
-  note: "pm_export plugin: answer must carry a MEDIA: tag for a saved .md under the exports dir."
+  note: "oa_export plugin: answer must carry a MEDIA: tag for a saved .md under the exports dir."
 - id: "export-zip"
   image: null
   question: "Make two documents, this week's summary and the open Jira issues, and send them as a zip"
   must_contain: [["MEDIA:/opt/data/cache/documents/exports/"], [".zip"]]
   must_not_contain: []
-  note: "pm_export plugin: save_zip with two documents."
+  note: "oa_export plugin: save_zip with two documents."
 - id: "not-found"
   image: null
   question: "What did the team decide about the purple elephant migration?"

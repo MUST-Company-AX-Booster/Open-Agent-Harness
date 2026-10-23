@@ -1,4 +1,4 @@
-Nightly team summary. Use the teamdb MCP tools. execute_sql takes only a sql string (no bind parameters).
+Nightly team summary. Use the teamdb tools. execute_sql takes only a sql string (no bind parameters).
 1. Find every Slack channel and Telegram group with messages yesterday:
    slack_messages where ts >= current_date - 1 and ts < current_date (group by channel_id, channel_name),
    tg_messages likewise (group by chat_id, chat_title).

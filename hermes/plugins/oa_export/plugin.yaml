@@ -1,7 +1,7 @@
-name: pm_export
+name: oa_export
 version: 1.0.0
 description: "Save answers as .md or .zip files for Slack. Write-only: writes under $HERMES_HOME/cache/documents/exports, never reads files."
-author: PM-Agent
+author: Open-Agent
 provides_tools:
   - save_markdown
   - save_zip

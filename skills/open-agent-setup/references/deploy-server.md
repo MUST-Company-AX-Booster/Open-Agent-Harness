@@ -40,7 +40,7 @@ Then follow "Start and verify" in SKILL.md (`ps`, logs, `check_permissions.sh`, 
 
 1. On the laptop, dump data, then stop the stack. Only one copy may hold the Slack app and the Telegram session.
    ```bash
-   docker compose exec -T postgres pg_dump -U postgres --data-only pm | gzip > pm-data.sql.gz
+   docker compose exec -T postgres pg_dump -U postgres --data-only openagent | gzip > openagent-data.sql.gz
    docker compose stop
    ```
 2. Copy `.env`, `data/hermes/` (scheduled jobs, sessions, Notion login; skip `gateway.*` files) and the dump.
@@ -49,8 +49,8 @@ Then follow "Start and verify" in SKILL.md (`ps`, logs, `check_permissions.sh`, 
    rest:
    ```bash
    docker compose up -d --build postgres
-   docker compose exec -T postgres pg_isready -U postgres -d pm
-   gunzip -c pm-data.sql.gz | docker compose exec -T postgres psql -U postgres -d pm -v ON_ERROR_STOP=1
+   docker compose exec -T postgres pg_isready -U postgres -d openagent
+   gunzip -c openagent-data.sql.gz | docker compose exec -T postgres psql -U postgres -d openagent -v ON_ERROR_STOP=1
    docker compose up -d --build
    ```
 
