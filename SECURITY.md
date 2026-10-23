@@ -6,7 +6,8 @@ your model provider. Report vulnerabilities privately. Do not report them in pub
 ## Report a vulnerability
 
 Use [GitHub private vulnerability reporting](https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness/security/advisories/new).
-If you can't use it, email aero@must.company with "Open Agent security" in the subject.
+If you can't use it, email aero@must.company and zaffreblue@must.company with "Open Agent security" in the
+subject.
 
 Include the affected service (`collector`, `hermes`, a plugin, the database setup), steps to reproduce,
 and the impact. Leave out real tokens, session strings and private team messages.

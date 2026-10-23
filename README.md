@@ -433,6 +433,8 @@ python3 hermes/plugins/jev-skill-router/tests/test_offline.py
 
 ## Credits and license
 
+- Built and maintained by Abhijit Rao ([@must-aero](https://github.com/must-aero)) and Yashal Nawid
+  ([@must-zaffreblue](https://github.com/must-zaffreblue)) at MUST Company. See [GOVERNANCE.md](GOVERNANCE.md).
 - [Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous Research (MIT), included as a git submodule.
 - `hermes/plugins/jev-skill-router` by DoGMaTiiC (MIT), vendored with small changes.
 - All other code is released under the MIT License. See [LICENSE](LICENSE).

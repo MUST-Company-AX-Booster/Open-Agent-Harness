@@ -8,6 +8,9 @@ under the [MIT License](LICENSE).
 | Maintainer | Role |
 |---|---|
 | Abhijit Rao ([@must-aero](https://github.com/must-aero)) | Lead maintainer: reviews, releases, security reports |
+| Yashal Nawid ([@must-zaffreblue](https://github.com/must-zaffreblue)) | Lead maintainer: reviews, releases, security reports |
+
+Both maintainers built Open Agent together and share every responsibility equally.
 
 ## What we commit to
 
@@ -22,7 +25,7 @@ maintainer or archive the repository. We will not leave it quietly unmaintained.
 
 ## Promises about the license
 
-MUST Company's CEO is accountable for these promises.
+The maintainers are accountable for these promises.
 
 1. Everything released here under MIT stays under MIT. We will not re-license released code to a
    source-available or proprietary license.
@@ -37,5 +40,5 @@ change what is published here.
 
 ## Decisions
 
-The lead maintainer decides on day-to-day changes. Changes to the promises above or to the license need
-sign-off from MUST Company's CEO and are announced as described in promise 5.
+Either maintainer decides on day-to-day changes. Changes to the promises above or to the license need
+both maintainers to agree and are announced as described in promise 5.
