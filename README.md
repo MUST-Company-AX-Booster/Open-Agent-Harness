@@ -31,7 +31,7 @@ Run it with Docker Compose. Add credentials to [`.env`](.env.example) and descri
 
 <video src="docs/readme-intro.mp4" width="640" height="360" controls preload="metadata"></video>
 
-<p><a href="docs/readme-intro.mp4">Watch the 26-second video</a></p>
+<p><a href="docs/readme-intro.mp4">Watch the 35-second video</a></p>
 
 </div>
 
