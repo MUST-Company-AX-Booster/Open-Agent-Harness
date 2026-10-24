@@ -29,41 +29,6 @@ Run it with Docker Compose. Add credentials to [`.env`](.env.example) and descri
 
 https://github.com/user-attachments/assets/95bac865-b353-4ef2-b027-3383b1c467c8
 
-## Meet Open Agent
-
-Six mascots represent the assistant's roles. They are branding concepts, not separate agents.
-
-| Fox | Owl | Border collie | Elephant | Otter | Raven |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| [![Fox logo: plum and ivory curled fox on an orange background](docs/icon-concepts/32-fox-curled.png)](docs/icon-concepts/32-fox-curled.png) | [![Owl logo: navy owl on a golden background](docs/icon-concepts/34-animal-owl.png)](docs/icon-concepts/34-animal-owl.png) | [![Border collie logo: navy dog on a blue background](docs/icon-concepts/35-animal-collie.png)](docs/icon-concepts/35-animal-collie.png) | [![Elephant logo: plum elephant on an apricot background](docs/icon-concepts/36-animal-elephant.png)](docs/icon-concepts/36-animal-elephant.png) | [![Otter logo: forest-green otter on a mint background](docs/icon-concepts/37-animal-otter.png)](docs/icon-concepts/37-animal-otter.png) | [![Raven logo: plum raven on a periwinkle background](docs/icon-concepts/38-animal-raven.png)](docs/icon-concepts/38-animal-raven.png) |
-| Solve problems | Find knowledge | Coordinate work | Remember decisions | Help the team | Connect the clues |
-
-## What you can ask
-
-Try these after connecting your sources:
-
-| Ask in Slack | What the agent looks for |
-|---|---|
-| “What did we decide about the onboarding flow last week?” | Discussions and dates that show what was proposed and what was agreed. |
-| “Who owns this bug, and what is blocking it?” | Jira status, assignee, and related team discussions. |
-| “What shipped this week?” | GitHub changes, Jira issues, and recent team updates. |
-| “Turn this discussion into a Jira issue.” | An issue draft for you to confirm before it writes to Jira. |
-| “Give me the full report as a Markdown file.” | A downloadable file attached to the Slack reply. |
-
-The assistant can only answer from the sources and history it can access.
-
-## What it does
-
-- Collects Slack history every five minutes and Telegram messages as they arrive.
-- Searches messages in PostgreSQL with PGroonga. Scheduled summaries help it find older discussions.
-- Answers channel mentions and direct messages from allowed Slack users through Socket Mode.
-- Reads connected Jira, GitHub, and Notion sources. Jira writes require confirmation under the bundled instructions.
-- Runs scheduled jobs and exports reports to Slack.
-- Uses an OpenAI-compatible model with tool calling. Optional TypeSafe Jev routing selects a model and reasoning effort per message.
-
-The message database runs on your infrastructure. Relevant content is sent to your model provider and
-connected services. See [Security](#security) for access and data-handling limits.
-
 ## Quick start
 
 Install the setup skill into your coding agent (Claude Code, Codex, Cursor, Gemini CLI and
@@ -146,6 +111,41 @@ Schedule a summary at **01:00 in `TEAM_TIMEZONE`**:
 docker compose exec hermes hermes cron create "0 1 * * *" "$(cat hermes/cron/nightly-summaries.md)" \
   --name nightly-summaries --skill team-history
 ```
+
+## Meet Open Agent
+
+Six mascots represent the assistant's roles. They are branding concepts, not separate agents.
+
+| Fox | Owl | Border collie | Elephant | Otter | Raven |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| [![Fox logo: plum and ivory curled fox on an orange background](docs/icon-concepts/32-fox-curled.png)](docs/icon-concepts/32-fox-curled.png) | [![Owl logo: navy owl on a golden background](docs/icon-concepts/34-animal-owl.png)](docs/icon-concepts/34-animal-owl.png) | [![Border collie logo: navy dog on a blue background](docs/icon-concepts/35-animal-collie.png)](docs/icon-concepts/35-animal-collie.png) | [![Elephant logo: plum elephant on an apricot background](docs/icon-concepts/36-animal-elephant.png)](docs/icon-concepts/36-animal-elephant.png) | [![Otter logo: forest-green otter on a mint background](docs/icon-concepts/37-animal-otter.png)](docs/icon-concepts/37-animal-otter.png) | [![Raven logo: plum raven on a periwinkle background](docs/icon-concepts/38-animal-raven.png)](docs/icon-concepts/38-animal-raven.png) |
+| Solve problems | Find knowledge | Coordinate work | Remember decisions | Help the team | Connect the clues |
+
+## What you can ask
+
+Try these after connecting your sources:
+
+| Ask in Slack | What the agent looks for |
+|---|---|
+| “What did we decide about the onboarding flow last week?” | Discussions and dates that show what was proposed and what was agreed. |
+| “Who owns this bug, and what is blocking it?” | Jira status, assignee, and related team discussions. |
+| “What shipped this week?” | GitHub changes, Jira issues, and recent team updates. |
+| “Turn this discussion into a Jira issue.” | An issue draft for you to confirm before it writes to Jira. |
+| “Give me the full report as a Markdown file.” | A downloadable file attached to the Slack reply. |
+
+The assistant can only answer from the sources and history it can access.
+
+## What it does
+
+- Collects Slack history every five minutes and Telegram messages as they arrive.
+- Searches messages in PostgreSQL with PGroonga. Scheduled summaries help it find older discussions.
+- Answers channel mentions and direct messages from allowed Slack users through Socket Mode.
+- Reads connected Jira, GitHub, and Notion sources. Jira writes require confirmation under the bundled instructions.
+- Runs scheduled jobs and exports reports to Slack.
+- Uses an OpenAI-compatible model with tool calling. Optional TypeSafe Jev routing selects a model and reasoning effort per message.
+
+The message database runs on your infrastructure. Relevant content is sent to your model provider and
+connected services. See [Security](#security) for access and data-handling limits.
 
 ## Architecture
 
