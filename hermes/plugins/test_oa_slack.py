@@ -9,7 +9,7 @@ spec = importlib.util.spec_from_file_location("oa_slack", Path(__file__).parent 
 ps = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ps)
 
-LINK = "https://example.slack.com/archives/C03PJ3HD1EU/p1791269315370579"
+LINK = "https://example.slack.com/archives/C0123456789/p1791269315370579"
 
 
 class FakeSlack:
@@ -31,7 +31,7 @@ class FakeSlack:
         if method == "conversations.members":
             return {"ok": True, "members": ["U_MEMBER"]}
         if method == "users.info":
-            return {"ok": True, "user": {"profile": {"real_name": {"U1": "Tony", "U2": "Lion"}[params["user"]]}}}
+            return {"ok": True, "user": {"profile": {"real_name": {"U1": "Alice", "U2": "Bob"}[params["user"]]}}}
         raise AssertionError(method)
 
 
@@ -42,9 +42,9 @@ class PmSlackTest(unittest.TestCase):
         return fake
 
     def test_parse_link(self):
-        self.assertEqual(ps.parse_link(LINK), ("C03PJ3HD1EU", "1791269315.370579", "1791269315.370579"))
-        reply = LINK.replace("370579", "370999") + "?thread_ts=1791269315.370579&cid=C03PJ3HD1EU"
-        self.assertEqual(ps.parse_link(reply), ("C03PJ3HD1EU", "1791269315.370999", "1791269315.370579"))
+        self.assertEqual(ps.parse_link(LINK), ("C0123456789", "1791269315.370579", "1791269315.370579"))
+        reply = LINK.replace("370579", "370999") + "?thread_ts=1791269315.370579&cid=C0123456789"
+        self.assertEqual(ps.parse_link(reply), ("C0123456789", "1791269315.370999", "1791269315.370579"))
         self.assertIsNone(ps.parse_link("https://example.com/p1"))
 
     def test_reads_member_channel_without_joining(self):
@@ -53,7 +53,7 @@ class PmSlackTest(unittest.TestCase):
         self.assertNotIn("conversations.join", fake.calls)
         self.assertEqual(out["channel"], "#blk")
         first = out["messages"][0]
-        self.assertEqual((first["sender"], first["text"], first["linked"]), ("Tony", "hi @Lion see docs", True))
+        self.assertEqual((first["sender"], first["text"], first["linked"]), ("Alice", "hi @Bob see docs", True))
 
     def test_joins_public_channel_then_reads(self):
         fake = self.use(channel={"name": "blk", "is_channel": True, "is_member": False, "is_private": False})
@@ -85,11 +85,11 @@ class PmSlackTest(unittest.TestCase):
 
     def test_recent_needs_membership_and_valid_id(self):
         fake = self.use(channel={"name": "blk", "is_member": False, "is_private": False})
-        self.assertIn("not_in_channel", json.loads(ps.slack_recent({"channel_id": "C03PJ3HD1EU"}))["error"])
+        self.assertIn("not_in_channel", json.loads(ps.slack_recent({"channel_id": "C0123456789"}))["error"])
         self.assertNotIn("conversations.join", fake.calls)
         self.assertIn("error", json.loads(ps.slack_recent({"channel_id": "../x"})))
         self.use(channel={"name": "blk", "is_member": True})
-        self.assertEqual(len(json.loads(ps.slack_recent({"channel_id": "C03PJ3HD1EU", "limit": "x"}))["messages"]), 2)
+        self.assertEqual(len(json.loads(ps.slack_recent({"channel_id": "C0123456789", "limit": "x"}))["messages"]), 2)
 
     def test_status_phrase(self):
         self.assertEqual(ps._status_phrase("mcp__notion__notion_fetch", {"id": "x"}), "is reading Notion…")

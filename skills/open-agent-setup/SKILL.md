@@ -18,7 +18,7 @@ If the current directory is not a clone (no `docker-compose.yml` and `hermes/SOU
 wants it (default: `./open-agent`) and work from there:
 
 ```bash
-git clone --recurse-submodules https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness.git open-agent
+git clone --recurse-submodules https://github.com/globalmpc/open-agent-harness.git open-agent
 cd open-agent
 ```
 

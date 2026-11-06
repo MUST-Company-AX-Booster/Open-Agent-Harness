@@ -1,6 +1,6 @@
 # Governance
 
-Open Agent Harness is maintained by [MUST Company](https://github.com/MUST-Company-AX-Booster) and released
+Open Agent Harness is maintained by [MUST Company](https://github.com/globalmpc) and released
 under the [MIT License](LICENSE).
 
 ## Maintainers
