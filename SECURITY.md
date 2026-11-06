@@ -5,7 +5,7 @@ your model provider. Report vulnerabilities privately. Do not report them in pub
 
 ## Report a vulnerability
 
-Use [GitHub private vulnerability reporting](https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness/security/advisories/new).
+Use [GitHub private vulnerability reporting](https://github.com/globalmpc/open-agent-harness/security/advisories/new).
 If you can't use it, email aero@must.company and zaffreblue@must.company with "Open Agent security" in the
 subject.
 

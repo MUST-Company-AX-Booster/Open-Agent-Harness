@@ -29,7 +29,7 @@ Install the setup skill into your coding agent (Claude Code, Codex, Cursor, Gemi
 [others](https://github.com/vercel-labs/skills)):
 
 ```bash
-npx skills add MUST-Company-AX-Booster/Open-Agent-Harness --skill open-agent-setup
+npx skills add globalmpc/open-agent-harness --skill open-agent-setup
 ```
 
 Then ask it: `Set up Open Agent for my team.`
@@ -46,7 +46,7 @@ You need Git, Docker with Compose, a Slack app you can install, and an API key f
 **1. Clone and configure**
 
 ```bash
-git clone --recurse-submodules https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness.git
+git clone --recurse-submodules https://github.com/globalmpc/open-agent-harness.git
 cd Open-Agent-Harness
 cp .env.example .env
 ```

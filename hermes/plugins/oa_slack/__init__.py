@@ -182,7 +182,7 @@ def slack_read_link(args: dict, **kw) -> str:
 def slack_recent(args: dict, **kw) -> str:
     channel_id = str(args.get("channel_id") or "").strip()
     if not re.fullmatch(r"[A-Z0-9]+", channel_id):
-        return _error("channel_id must be a Slack channel id like C03PJ3HD1EU (see slack_sync_state).")
+        return _error("channel_id must be a Slack channel id like C0123456789 (see slack_sync_state).")
     ch, err = _channel(channel_id, join=False)
     if err:
         return err
@@ -784,7 +784,7 @@ SLACK_RECENT_SCHEMA = {
         "Channels the bot is in only."
     ),
     "parameters": {"type": "object", "properties": {
-        "channel_id": {"type": "string", "description": "Slack channel id, e.g. C03PJ3HD1EU (from slack_sync_state)."},
+        "channel_id": {"type": "string", "description": "Slack channel id, e.g. C0123456789 (from slack_sync_state)."},
         "limit": {"type": "integer", "description": f"How many newest messages, 1-{MAX_MESSAGES}. Default 20."},
     }, "required": ["channel_id"]},
 }

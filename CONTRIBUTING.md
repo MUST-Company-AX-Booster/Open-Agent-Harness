@@ -5,7 +5,7 @@ Bug reports, fixes, new connectors and answer-quality cases are welcome. By taki
 
 ## Report a bug
 
-[Open an issue](https://github.com/MUST-Company-AX-Booster/Open-Agent-Harness/issues) with reproduction
+[Open an issue](https://github.com/globalmpc/open-agent-harness/issues) with reproduction
 steps, the affected service, and redacted logs. Leave out tokens, session strings and private team
 messages. Report security problems through [SECURITY.md](SECURITY.md), not an issue.
 
